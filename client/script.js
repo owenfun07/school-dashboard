@@ -2,17 +2,33 @@ const params = new URLSearchParams(window.location.search);
 const token = params.get("token");
 
 async function loadData() {
-  const classroom = await fetch(`http://localhost:3000/api/classroom?token=${token}`);
-  const classroomData = await classroom.json();
+  // CLASSROOM
+  const classroomRes = await fetch(`/api/classroom?token=${token}`);
+  const classroomData = await classroomRes.json();
 
-  const calendar = await fetch(`http://localhost:3000/api/calendar?token=${token}`);
-  const calendarData = await calendar.json();
+  const classesList = document.getElementById("classes");
 
-  document.getElementById("classroom").textContent =
-    JSON.stringify(classroomData, null, 2);
+  if (classroomData.courses) {
+    classroomData.courses.forEach(course => {
+      const li = document.createElement("li");
+      li.textContent = course.name;
+      classesList.appendChild(li);
+    });
+  }
 
-  document.getElementById("calendar").textContent =
-    JSON.stringify(calendarData, null, 2);
+  // CALENDAR
+  const calendarRes = await fetch(`/api/calendar?token=${token}`);
+  const calendarData = await calendarRes.json();
+
+  const eventsList = document.getElementById("events");
+
+  if (calendarData.items) {
+    calendarData.items.forEach(event => {
+      const li = document.createElement("li");
+      li.textContent = event.summary || "No title";
+      eventsList.appendChild(li);
+    });
+  }
 }
 
 loadData();
