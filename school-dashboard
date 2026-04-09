@@ -1,0 +1,10 @@
+school-dashboard/
+├── server/
+│   ├── server.js
+│   ├── package.json
+├── client/
+│   ├── index.html
+│   ├── dashboard.html
+│   ├── style.css
+│   ├── script.js
+└── README.md
