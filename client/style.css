@@ -1,12 +1,52 @@
 body {
-  font-family: Arial;
-  text-align: center;
-  background: #111;
-  color: white;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
 
-button {
-  padding: 10px 20px;
+/* Center box */
+.container {
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* Title */
+h1 {
+  margin-bottom: 30px;
+  color: #333;
+}
+
+/* Google button */
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #444;
   font-size: 16px;
-  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Google logo */
+.google-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+/* Hover effect */
+.google-btn:hover {
+  background: #f1f3f4;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
