@@ -9,9 +9,10 @@ dotenv.config();
 const app = express();
 app.use(cors());
 
-// Serve frontend
+// Serve static frontend files
 app.use(express.static(path.join(process.cwd(), "../client")));
 
+// Root route
 app.get("/", (req, res) => {
   res.sendFile(path.join(process.cwd(), "../client/index.html"));
 });
@@ -53,14 +54,17 @@ app.get("/auth/google/callback", async (req, res) => {
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
 
-    res.redirect(`/dashboard.html?token=${tokens.access_token}`);
+    // Redirect to CLEAN URL
+    res.redirect(`/dashboard?token=${tokens.access_token}`);
   } catch (err) {
     console.error(err);
     res.send("Auth error");
   }
 });
 
-// CLASSROOM DATA
+// ================= API ROUTES =================
+
+// CLASSROOM
 app.get("/api/classroom", async (req, res) => {
   try {
     const token = req.query.token;
@@ -76,7 +80,7 @@ app.get("/api/classroom", async (req, res) => {
   }
 });
 
-// CALENDAR DATA
+// CALENDAR
 app.get("/api/calendar", async (req, res) => {
   try {
     const token = req.query.token;
@@ -96,6 +100,23 @@ app.get("/api/calendar", async (req, res) => {
     console.error(err);
     res.send("Calendar error");
   }
+});
+
+// ================= PAGE ROUTES =================
+
+// Clean URLs
+app.get("/dashboard", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "../client/dashboard.html"));
+});
+
+app.get("/about", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "../client/about.html"));
+});
+
+// OPTIONAL: Auto-handle future pages
+app.get("/:page", (req, res) => {
+  const page = req.params.page;
+  res.sendFile(path.join(process.cwd(), `../client/${page}.html`));
 });
 
 // START SERVER
