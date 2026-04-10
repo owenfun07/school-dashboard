@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,8 +19,14 @@
       </div>
 
       <div class="card">
-        <h2>📅 Upcoming Events</h2>
-        <ul id="events"></ul>
+        <h2>📝 Upcoming Assignments</h2>
+        <p id="selected-course" class="selected-course">Select a class to view assignments.</p>
+        <ul id="assignments"></ul>
+      </div>
+
+      <div class="card card-wide">
+        <h2>📅 Upcoming Events by Category</h2>
+        <div class="event-groups" id="event-groups"></div>
       </div>
 
     </div>
