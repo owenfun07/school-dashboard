@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,8 +19,30 @@
       </div>
 
       <div class="card">
-        <h2>📅 Upcoming Events</h2>
-        <ul id="events"></ul>
+        <div class="card-header-row">
+          <h2>📝 Assignments</h2>
+          <button id="assignment-refresh" class="refresh-btn" title="Refresh assignments">↻</button>
+        </div>
+
+        <p id="selected-course" class="selected-course">Select a class to view assignments.</p>
+
+        <div class="assignment-tabs">
+          <button class="tab-btn active" data-assignment-filter="all">All</button>
+          <button class="tab-btn" data-assignment-filter="unturned">Unturned In</button>
+          <button class="tab-btn" data-assignment-filter="upcoming">Upcoming</button>
+        </div>
+
+        <div id="assignment-loader" class="loader hidden"></div>
+        <ul id="assignments"></ul>
+      </div>
+
+      <div class="card card-wide">
+        <div class="card-header-row">
+          <h2>📅 Upcoming Events by Category</h2>
+          <button id="calendar-refresh" class="refresh-btn" title="Refresh calendar">↻</button>
+        </div>
+        <div id="calendar-loader" class="loader hidden"></div>
+        <div class="event-groups" id="event-groups"></div>
       </div>
 
     </div>
