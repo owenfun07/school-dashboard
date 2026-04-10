@@ -7,6 +7,16 @@
 </head>
 <body>
 
+  <button id="menu-toggle" class="menu-toggle" aria-label="Open menu">☰</button>
+
+  <aside id="side-menu" class="side-menu">
+    <button id="menu-close" class="menu-close" aria-label="Close menu">×</button>
+    <h3>Menu</h3>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/full-schedule">Full Schedule</a>
+  </aside>
+
+  <div id="menu-overlay" class="menu-overlay"></div>
 
   <div class="dashboard">
 
@@ -44,6 +54,7 @@
         </div>
         <div id="calendar-loader" class="loader hidden"></div>
         <div class="event-groups" id="event-groups"></div>
+        <a href="/full-schedule" class="see-more-link">See more →</a>
       </div>
 
     </div>
