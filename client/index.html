@@ -7,13 +7,14 @@
 </head>
 <body>
 
+
   <!-- Help Icon -->
   <a href="/about" class="help-btn">?</a>
 
   <div class="container login-container">
     <h1 class="main-title">Welcome to Your Home for Classroom Resources</h1>
 
-    <a href="/auth/google" class="google-btn">
+    <a href="/auth/google" class="google-btn" id="google-signin-btn">
       <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
       <span>Sign in with Google</span>
     </a>
@@ -25,6 +26,37 @@
     <span>•</span>
     <a href="/terms">Terms of Service</a>
   </div>
+
+  <script>
+    const googleButton = document.getElementById("google-signin-btn");
+
+    googleButton.addEventListener("click", function (event) {
+      event.preventDefault();
+
+      const popupWidth = 500;
+      const popupHeight = 650;
+      const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+      const top = window.screenY + (window.outerHeight - popupHeight) / 2;
+
+      const popup = window.open(
+        "/auth/google?popup=1",
+        "google-auth-popup",
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
+      );
+
+      if (!popup) {
+        window.location.href = "/auth/google";
+      }
+    });
+
+    window.addEventListener("message", function (event) {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data || event.data.type !== "google-auth-success") return;
+      if (!event.data.token) return;
+
+      window.location.href = `/dashboard?token=${event.data.token}`;
+    });
+  </script>
 
 </body>
 </html>

@@ -39,10 +39,14 @@ const SCOPES = [
 
 // LOGIN ROUTE
 app.get("/auth/google", (req, res) => {
+  const isPopup = req.query.popup === "1";
+
   const url = oAuth2Client.generateAuthUrl({
     access_type: "offline",
-    scope: SCOPES
+    scope: SCOPES,
+    state: isPopup ? "popup" : "default"
   });
+
   res.redirect(url);
 });
 
@@ -53,6 +57,19 @@ app.get("/auth/google/callback", async (req, res) => {
 
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
+
+    const isPopupFlow = req.query.state === "popup";
+
+    if (isPopupFlow) {
+      const safeToken = JSON.stringify(tokens.access_token || "");
+      res.send(`<!DOCTYPE html><html><body><script>
+        if (window.opener) {
+          window.opener.postMessage({ type: "google-auth-success", token: ${safeToken} }, window.location.origin);
+        }
+        window.close();
+      </script></body></html>`);
+      return;
+    }
 
     // Redirect to CLEAN URL
     res.redirect(`/dashboard?token=${tokens.access_token}`);
