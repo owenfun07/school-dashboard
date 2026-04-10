@@ -165,11 +165,54 @@ li {
   border-bottom: 1px solid #eee;
 }
 
+.google-btn.is-loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
 
-/* Site logo */
-.site-logo {
-  display: block;
-  width: 80px;
-  height: auto;
-  margin: 20px auto 0;
+.google-btn.is-loading img {
+  opacity: 0.4;
+}
+
+.card-wide {
+  grid-column: 1 / -1;
+}
+
+.class-btn {
+  width: 100%;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.class-btn:hover {
+  background: #eef2ff;
+}
+
+.selected-course {
+  margin-top: 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.event-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.event-group {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.event-group h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
 }

@@ -97,6 +97,33 @@ app.get("/api/classroom", async (req, res) => {
   }
 });
 
+
+// COURSEWORK
+app.get("/api/coursework", async (req, res) => {
+  try {
+    const token = req.query.token;
+    const courseId = req.query.courseId;
+
+    if (!courseId) {
+      res.status(400).json({ error: "courseId is required" });
+      return;
+    }
+
+    oAuth2Client.setCredentials({ access_token: token });
+
+    const classroom = google.classroom({ version: "v1", auth: oAuth2Client });
+    const coursework = await classroom.courses.courseWork.list({
+      courseId,
+      pageSize: 50
+    });
+
+    res.json(coursework.data);
+  } catch (err) {
+    console.error(err);
+    res.send("Coursework error");
+  }
+});
+
 // CALENDAR
 app.get("/api/calendar", async (req, res) => {
   try {
@@ -107,9 +134,10 @@ app.get("/api/calendar", async (req, res) => {
 
     const events = await calendar.events.list({
       calendarId: "primary",
-      maxResults: 10,
+      maxResults: 100,
       singleEvents: true,
-      orderBy: "startTime"
+      orderBy: "startTime",
+      timeMin: new Date().toISOString()
     });
 
     res.json(events.data);

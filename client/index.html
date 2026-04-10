@@ -29,9 +29,26 @@
 
   <script>
     const googleButton = document.getElementById("google-signin-btn");
+    const googleButtonText = googleButton.querySelector("span");
+    const savedToken = localStorage.getItem("access_token");
+
+    if (savedToken) {
+      window.location.href = "/dashboard";
+    }
+
+    function setAuthLoading(isLoading) {
+      if (isLoading) {
+        googleButton.classList.add("is-loading");
+        googleButtonText.textContent = "Loading...";
+      } else {
+        googleButton.classList.remove("is-loading");
+        googleButtonText.textContent = "Sign in with Google";
+      }
+    }
 
     googleButton.addEventListener("click", function (event) {
       event.preventDefault();
+      setAuthLoading(true);
 
       const popupWidth = 500;
       const popupHeight = 650;
@@ -46,7 +63,15 @@
 
       if (!popup) {
         window.location.href = "/auth/google";
+        return;
       }
+
+      const popupCheck = window.setInterval(function () {
+        if (popup.closed) {
+          window.clearInterval(popupCheck);
+          setAuthLoading(false);
+        }
+      }, 500);
     });
 
     window.addEventListener("message", function (event) {
@@ -54,7 +79,8 @@
       if (!event.data || event.data.type !== "google-auth-success") return;
       if (!event.data.token) return;
 
-      window.location.href = `/dashboard?token=${event.data.token}`;
+      localStorage.setItem("access_token", event.data.token);
+      window.location.href = "/dashboard";
     });
   </script>
 
