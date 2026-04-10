@@ -8,6 +8,17 @@ if (urlToken) {
   window.history.replaceState({}, "", "/dashboard");
 }
 
+const classesList = document.getElementById("classes");
+const assignmentsList = document.getElementById("assignments");
+const selectedCourse = document.getElementById("selected-course");
+const assignmentLoader = document.getElementById("assignment-loader");
+const calendarLoader = document.getElementById("calendar-loader");
+const groupsContainer = document.getElementById("event-groups");
+
+let selectedCourseId = null;
+let selectedCourseName = null;
+let assignmentCache = [];
+let activeAssignmentFilter = "all";
 
 function formatDate(dateInput) {
   if (!dateInput) return "No due date";
@@ -31,41 +42,6 @@ function courseWorkDueDate(work) {
   const minute = work.dueTime?.minutes || 0;
 
   return new Date(year, month, day, hour, minute);
-}
-
-async function loadAssignments(courseId, courseName) {
-  const assignmentsList = document.getElementById("assignments");
-  const selectedCourse = document.getElementById("selected-course");
-
-  assignmentsList.innerHTML = "";
-  selectedCourse.textContent = `Loading assignments for ${courseName}...`;
-
-  const response = await fetch(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
-  const data = await response.json();
-
-  const now = new Date();
-  const upcoming = (data.courseWork || [])
-    .map(work => ({
-      ...work,
-      due: courseWorkDueDate(work)
-    }))
-    .filter(work => work.due && work.due >= now)
-    .sort((a, b) => a.due - b.due);
-
-  selectedCourse.textContent = `Upcoming assignments for ${courseName}`;
-
-  if (upcoming.length === 0) {
-    const li = document.createElement("li");
-    li.textContent = "No upcoming assignments found.";
-    assignmentsList.appendChild(li);
-    return;
-  }
-
-  upcoming.forEach(work => {
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${work.title || "Untitled assignment"}</strong><br><span>${formatDate(work.due)}</span>`;
-    assignmentsList.appendChild(li);
-  });
 }
 
 function eventStartDate(event) {
@@ -99,8 +75,84 @@ function endOfMonth() {
   return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 }
 
+function setLoader(loaderEl, isVisible) {
+  loaderEl.classList.toggle("hidden", !isVisible);
+}
+
+function isUnturnedIn(assignment) {
+  return assignment.mySubmissionState !== "TURNED_IN" && assignment.mySubmissionState !== "RETURNED";
+}
+
+function getFilteredAssignments(assignments, filter) {
+  const now = new Date();
+
+  if (filter === "unturned") {
+    return assignments.filter(isUnturnedIn);
+  }
+
+  if (filter === "upcoming") {
+    return assignments.filter(assignment => assignment.due && assignment.due >= now);
+  }
+
+  return assignments;
+}
+
+function renderAssignments() {
+  assignmentsList.innerHTML = "";
+
+  const filtered = getFilteredAssignments(assignmentCache, activeAssignmentFilter);
+
+  if (filtered.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No assignments for this tab.";
+    assignmentsList.appendChild(li);
+    return;
+  }
+
+  filtered.forEach(work => {
+    const li = document.createElement("li");
+    const status = work.mySubmissionState || "UNKNOWN";
+
+    li.innerHTML = `<strong>${work.title || "Untitled assignment"}</strong>
+      <br><span>${formatDate(work.due)}</span>
+      <br><span class="assignment-state">Status: ${status.replaceAll("_", " ")}</span>`;
+    assignmentsList.appendChild(li);
+  });
+}
+
+async function loadAssignments(courseId, courseName, forceRefresh = false) {
+  selectedCourseId = courseId;
+  selectedCourseName = courseName;
+
+  selectedCourse.textContent = `Loading assignments for ${courseName}...`;
+  setLoader(assignmentLoader, true);
+
+  if (!forceRefresh) {
+    assignmentCache = [];
+    renderAssignments();
+  }
+
+  const response = await fetch(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
+  const data = await response.json();
+
+  assignmentCache = (data.courseWork || [])
+    .map(work => ({
+      ...work,
+      due: courseWorkDueDate(work)
+    }))
+    .sort((a, b) => {
+      if (!a.due && !b.due) return 0;
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return a.due - b.due;
+    });
+
+  selectedCourse.textContent = `Assignments for ${courseName}`;
+  setLoader(assignmentLoader, false);
+  renderAssignments();
+}
+
 function renderEventGroups(events) {
-  const groupsContainer = document.getElementById("event-groups");
   groupsContainer.innerHTML = "";
 
   const todayStart = startOfToday();
@@ -155,11 +207,41 @@ function renderEventGroups(events) {
   });
 }
 
-async function loadData() {
+async function loadCalendar(forceRefresh = false) {
+  if (!forceRefresh) {
+    groupsContainer.innerHTML = "";
+  }
+
+  setLoader(calendarLoader, true);
+
+  const calendarRes = await fetch(`/api/calendar?token=${encodeURIComponent(token)}`);
+  const calendarData = await calendarRes.json();
+  const events = (calendarData.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b));
+
+  setLoader(calendarLoader, false);
+  renderEventGroups(events);
+}
+
+function setupAssignmentTabs() {
+  const tabButtons = document.querySelectorAll(".tab-btn");
+
+  tabButtons.forEach(button => {
+    button.addEventListener("click", function () {
+      activeAssignmentFilter = button.dataset.assignmentFilter;
+
+      tabButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      renderAssignments();
+    });
+  });
+}
+
+async function loadClasses() {
   const classroomRes = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
   const classroomData = await classroomRes.json();
 
-  const classesList = document.getElementById("classes");
+  classesList.innerHTML = "";
 
   if (classroomData.courses && classroomData.courses.length > 0) {
     classroomData.courses.forEach(course => {
@@ -176,12 +258,25 @@ async function loadData() {
     li.textContent = "No classes found.";
     classesList.appendChild(li);
   }
+}
 
-  const calendarRes = await fetch(`/api/calendar?token=${encodeURIComponent(token)}`);
-  const calendarData = await calendarRes.json();
-  const events = (calendarData.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b));
+function setupRefreshButtons() {
+  document.getElementById("assignment-refresh").addEventListener("click", function () {
+    if (selectedCourseId) {
+      loadAssignments(selectedCourseId, selectedCourseName, true);
+    }
+  });
 
-  renderEventGroups(events);
+  document.getElementById("calendar-refresh").addEventListener("click", function () {
+    loadCalendar(true);
+  });
+}
+
+async function loadData() {
+  setupAssignmentTabs();
+  setupRefreshButtons();
+  await loadClasses();
+  await loadCalendar();
 }
 
 if (!token) {

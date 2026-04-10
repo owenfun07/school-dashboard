@@ -117,7 +117,35 @@ app.get("/api/coursework", async (req, res) => {
       pageSize: 50
     });
 
-    res.json(coursework.data);
+    const courseWorkWithState = await Promise.all(
+      (coursework.data.courseWork || []).map(async work => {
+        try {
+          const submissions = await classroom.courses.courseWork.studentSubmissions.list({
+            courseId,
+            courseWorkId: work.id,
+            userId: "me",
+            pageSize: 1
+          });
+
+          const mySubmission = submissions.data.studentSubmissions?.[0];
+          return {
+            ...work,
+            mySubmissionState: mySubmission?.state || "UNKNOWN"
+          };
+        } catch (submissionErr) {
+          console.error(submissionErr);
+          return {
+            ...work,
+            mySubmissionState: "UNKNOWN"
+          };
+        }
+      })
+    );
+
+    res.json({
+      ...coursework.data,
+      courseWork: courseWorkWithState
+    });
   } catch (err) {
     console.error(err);
     res.send("Coursework error");
