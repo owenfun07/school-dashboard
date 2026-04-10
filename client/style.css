@@ -102,3 +102,46 @@ li {
   padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
+
+/* Make login box wider */
+.login-container {
+  max-width: 600px;
+  width: 90%;
+}
+
+/* Footer (bottom links) */
+.footer {
+  position: absolute;
+  bottom: 20px;
+  text-align: center;
+  width: 100%;
+  font-size: 13px;
+  color: #777;
+}
+
+.footer a {
+  color: #777;
+  text-decoration: none;
+  margin: 0 5px;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+/* Page layout (privacy/terms) */
+.page {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 20px;
+  color: #333;
+  line-height: 1.6;
+}
+
+.page h1 {
+  margin-bottom: 20px;
+}
+
+.page h2 {
+  margin-top: 20px;
+}
