@@ -159,16 +159,47 @@ app.get("/api/calendar", async (req, res) => {
     oAuth2Client.setCredentials({ access_token: token });
 
     const calendar = google.calendar({ version: "v3", auth: oAuth2Client });
+    const timeMin = new Date().toISOString();
 
-    const events = await calendar.events.list({
-      calendarId: "primary",
-      maxResults: 100,
-      singleEvents: true,
-      orderBy: "startTime",
-      timeMin: new Date().toISOString()
+    const calendarListResponse = await calendar.calendarList.list({
+      minAccessRole: "reader",
+      showHidden: false
     });
 
-    res.json(events.data);
+    const calendars = (calendarListResponse.data.items || []).filter(item => !item.deleted);
+
+    const eventResponses = await Promise.all(
+      calendars.map(async calendarItem => {
+        try {
+          const response = await calendar.events.list({
+            calendarId: calendarItem.id,
+            maxResults: 50,
+            singleEvents: true,
+            orderBy: "startTime",
+            timeMin
+          });
+
+          return (response.data.items || []).map(event => ({
+            ...event,
+            sourceCalendarId: calendarItem.id,
+            sourceCalendarSummary: calendarItem.summary || "Calendar"
+          }));
+        } catch (calendarErr) {
+          console.error(calendarErr);
+          return [];
+        }
+      })
+    );
+
+    const allEvents = eventResponses.flat().sort((a, b) => {
+      const startA = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
+      const startB = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
+      return startA - startB;
+    });
+
+    res.json({
+      items: allEvents
+    });
   } catch (err) {
     console.error(err);
     res.send("Calendar error");

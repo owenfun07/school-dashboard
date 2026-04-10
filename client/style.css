@@ -287,3 +287,8 @@ li {
   margin-top: 0;
   margin-bottom: 12px;
 }
+
+.event-calendar-name {
+  color: #667085;
+  font-size: 12px;
+}

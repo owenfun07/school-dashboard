@@ -197,7 +197,7 @@ function renderEventGroups(events) {
     } else {
       groupedEvents.forEach(event => {
         const li = document.createElement("li");
-        li.innerHTML = `<strong>${event.summary || "No title"}</strong><br><span>${formatDate(eventStartDate(event))}</span>`;
+        li.innerHTML = `<strong>${event.summary || "No title"}</strong><br><span>${formatDate(eventStartDate(event))}</span><br><span class="event-calendar-name">${event.sourceCalendarSummary || "Primary"}</span>`;
         list.appendChild(li);
       });
     }
