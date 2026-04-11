@@ -185,8 +185,9 @@ li {
   border: 1px solid #d0d5dd;
   background: white;
   border-radius: 999px;
-  width: 28px;
+  min-width: 28px;
   height: 28px;
+  padding: 0 8px;
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
@@ -445,4 +446,62 @@ li {
 .day-more {
   font-size: 12px;
   color: #667085;
+}
+
+.drive-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.drive-search {
+  flex: 1;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.drive-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.drive-file-link {
+  color: #344054;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drive-file-link:hover {
+  text-decoration: underline;
+}
+
+.star-btn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: #f59e0b;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.star-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.day-number-today {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ef4444;
+  border-radius: 50%;
+  color: #ef4444;
 }

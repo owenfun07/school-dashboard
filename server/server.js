@@ -34,7 +34,8 @@ const SCOPES = [
   "https://www.googleapis.com/auth/classroom.courses.readonly",
   "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
   "https://www.googleapis.com/auth/classroom.student-submissions.me.readonly",
-  "https://www.googleapis.com/auth/calendar.readonly"
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/drive"
 ];
 
 // LOGIN ROUTE
@@ -203,6 +204,72 @@ app.get("/api/calendar", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.send("Calendar error");
+  }
+});
+
+
+// DRIVE FILE SEARCH
+app.get("/api/drive", async (req, res) => {
+  try {
+    const token = req.query.token;
+    const query = req.query.q || "";
+    const starredOnly = req.query.starred === "1";
+
+    oAuth2Client.setCredentials({ access_token: token });
+
+    const drive = google.drive({ version: "v3", auth: oAuth2Client });
+
+    const escapedQuery = String(query).replace(/'/g, "\\'");
+    const queryParts = ["trashed = false"];
+
+    if (escapedQuery) {
+      queryParts.push(`name contains '${escapedQuery}'`);
+    }
+
+    if (starredOnly) {
+      queryParts.push("starred = true");
+    }
+
+    const files = await drive.files.list({
+      q: queryParts.join(" and "),
+      pageSize: 30,
+      fields: "files(id,name,webViewLink,starred,mimeType)",
+      orderBy: "modifiedTime desc"
+    });
+
+    res.json({ files: files.data.files || [] });
+  } catch (err) {
+    console.error(err);
+    res.send("Drive error");
+  }
+});
+
+// DRIVE STAR TOGGLE
+app.get("/api/drive/star", async (req, res) => {
+  try {
+    const token = req.query.token;
+    const fileId = req.query.fileId;
+    const starred = req.query.starred === "1";
+
+    if (!fileId) {
+      res.status(400).json({ error: "fileId is required" });
+      return;
+    }
+
+    oAuth2Client.setCredentials({ access_token: token });
+
+    const drive = google.drive({ version: "v3", auth: oAuth2Client });
+
+    const updated = await drive.files.update({
+      fileId,
+      requestBody: { starred },
+      fields: "id,name,starred"
+    });
+
+    res.json(updated.data);
+  } catch (err) {
+    console.error(err);
+    res.send("Drive star error");
   }
 });
 

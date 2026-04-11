@@ -14,11 +14,16 @@ const selectedCourse = document.getElementById("selected-course");
 const assignmentLoader = document.getElementById("assignment-loader");
 const calendarLoader = document.getElementById("calendar-loader");
 const groupsContainer = document.getElementById("event-groups");
+const driveFilesList = document.getElementById("drive-files");
+const driveSearchInput = document.getElementById("drive-search");
+const driveLoader = document.getElementById("drive-loader");
 
 let selectedCourseId = null;
 let selectedCourseName = null;
 let assignmentCache = [];
 let activeAssignmentFilter = "all";
+let activeDriveFilter = "all";
+let driveSearchQuery = "";
 
 function formatDate(dateInput) {
   if (!dateInput) return "No due date";
@@ -260,6 +265,88 @@ async function loadClasses() {
   }
 }
 
+
+async function toggleDriveStar(fileId, nextStarredValue) {
+  await fetch(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
+}
+
+function renderDriveFiles(files) {
+  driveFilesList.innerHTML = "";
+
+  if (!files.length) {
+    const li = document.createElement("li");
+    li.textContent = "No files found.";
+    driveFilesList.appendChild(li);
+    return;
+  }
+
+  files.forEach(file => {
+    const li = document.createElement("li");
+    li.className = "drive-file-item";
+
+    const link = document.createElement("a");
+    link.href = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.className = "drive-file-link";
+    link.textContent = file.name || "Untitled file";
+
+    const starButton = document.createElement("button");
+    starButton.className = "star-btn";
+    starButton.textContent = file.starred ? "★" : "☆";
+    starButton.title = file.starred ? "Unstar" : "Star";
+    starButton.addEventListener("click", async () => {
+      starButton.disabled = true;
+      await toggleDriveStar(file.id, !file.starred);
+      await loadDriveFiles(true);
+    });
+
+    li.appendChild(link);
+    li.appendChild(starButton);
+    driveFilesList.appendChild(li);
+  });
+}
+
+async function loadDriveFiles(forceRefresh = false) {
+  if (!forceRefresh) {
+    driveFilesList.innerHTML = "";
+  }
+
+  setLoader(driveLoader, true);
+
+  const starred = activeDriveFilter === "starred" ? "1" : "0";
+  const response = await fetch(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}`);
+  const data = await response.json();
+
+  setLoader(driveLoader, false);
+  renderDriveFiles(data.files || []);
+}
+
+function setupDriveControls() {
+  const driveTabButtons = document.querySelectorAll("[data-drive-filter]");
+
+  driveTabButtons.forEach(button => {
+    button.addEventListener("click", function () {
+      activeDriveFilter = button.dataset.driveFilter;
+      driveTabButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+      loadDriveFiles();
+    });
+  });
+
+  document.getElementById("drive-search-btn").addEventListener("click", function () {
+    driveSearchQuery = driveSearchInput.value.trim();
+    loadDriveFiles();
+  });
+
+  driveSearchInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      driveSearchQuery = driveSearchInput.value.trim();
+      loadDriveFiles();
+    }
+  });
+}
+
 function setupRefreshButtons() {
   document.getElementById("assignment-refresh").addEventListener("click", function () {
     if (selectedCourseId) {
@@ -297,9 +384,11 @@ function setupSidebar() {
 async function loadData() {
   setupSidebar();
   setupAssignmentTabs();
+  setupDriveControls();
   setupRefreshButtons();
   await loadClasses();
   await loadCalendar();
+  await loadDriveFiles();
 }
 
 if (!token) {

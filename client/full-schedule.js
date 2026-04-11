@@ -68,6 +68,8 @@ function renderMonth() {
     monthGrid.appendChild(blank);
   }
 
+  const today = new Date();
+
   for (let day = 1; day <= daysInMonth; day++) {
     const cell = document.createElement("div");
     cell.className = "day-cell";
@@ -75,6 +77,11 @@ function renderMonth() {
     const dayLabel = document.createElement("div");
     dayLabel.className = "day-number";
     dayLabel.textContent = String(day);
+
+    if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === day) {
+      dayLabel.classList.add("day-number-today");
+    }
+
     cell.appendChild(dayLabel);
 
     const dayEvents = eventsForDay(year, month, day).slice(0, 4);
@@ -116,6 +123,12 @@ function setupMonthControls() {
 
   document.getElementById("next-month").addEventListener("click", function () {
     currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    renderMonth();
+  });
+
+  document.getElementById("today-btn").addEventListener("click", function () {
+    const now = new Date();
+    currentDate = new Date(now.getFullYear(), now.getMonth(), 1);
     renderMonth();
   });
 }
