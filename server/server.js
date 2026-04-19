@@ -34,15 +34,20 @@ const SCOPES = [
   "https://www.googleapis.com/auth/classroom.courses.readonly",
   "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
   "https://www.googleapis.com/auth/classroom.student-submissions.me.readonly",
-  "https://www.googleapis.com/auth/calendar.readonly"
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/drive"
 ];
 
 // LOGIN ROUTE
 app.get("/auth/google", (req, res) => {
+  const isPopup = req.query.popup === "1";
+
   const url = oAuth2Client.generateAuthUrl({
     access_type: "offline",
-    scope: SCOPES
+    scope: SCOPES,
+    state: isPopup ? "popup" : "default"
   });
+
   res.redirect(url);
 });
 
@@ -53,6 +58,19 @@ app.get("/auth/google/callback", async (req, res) => {
 
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
+
+    const isPopupFlow = req.query.state === "popup";
+
+    if (isPopupFlow) {
+      const safeToken = JSON.stringify(tokens.access_token || "");
+      res.send(`<!DOCTYPE html><html><body><script>
+        if (window.opener) {
+          window.opener.postMessage({ type: "google-auth-success", token: ${safeToken} }, window.location.origin);
+        }
+        window.close();
+      </script></body></html>`);
+      return;
+    }
 
     // Redirect to CLEAN URL
     res.redirect(`/dashboard?token=${tokens.access_token}`);
@@ -80,6 +98,61 @@ app.get("/api/classroom", async (req, res) => {
   }
 });
 
+
+// COURSEWORK
+app.get("/api/coursework", async (req, res) => {
+  try {
+    const token = req.query.token;
+    const courseId = req.query.courseId;
+
+    if (!courseId) {
+      res.status(400).json({ error: "courseId is required" });
+      return;
+    }
+
+    oAuth2Client.setCredentials({ access_token: token });
+
+    const classroom = google.classroom({ version: "v1", auth: oAuth2Client });
+    const coursework = await classroom.courses.courseWork.list({
+      courseId,
+      pageSize: 50
+    });
+
+    const courseWorkWithState = await Promise.all(
+      (coursework.data.courseWork || []).map(async work => {
+        try {
+          const submissions = await classroom.courses.courseWork.studentSubmissions.list({
+            courseId,
+            courseWorkId: work.id,
+            userId: "me",
+            pageSize: 1
+          });
+
+          const mySubmission = submissions.data.studentSubmissions?.[0];
+          return {
+            ...work,
+            mySubmissionState: mySubmission?.state || "UNKNOWN"
+          };
+        } catch (submissionErr) {
+          console.error(submissionErr);
+          return {
+            ...work,
+            mySubmissionState: "UNKNOWN"
+          };
+        }
+      })
+    );
+
+    res.json({
+      ...coursework.data,
+      courseWork: courseWorkWithState
+    });
+  } catch (err) {
+    console.error(err);
+    res.send("Coursework error");
+  }
+});
+
 // CALENDAR
 app.get("/api/calendar", async (req, res) => {
   try {
@@ -87,18 +160,116 @@ app.get("/api/calendar", async (req, res) => {
     oAuth2Client.setCredentials({ access_token: token });
 
     const calendar = google.calendar({ version: "v3", auth: oAuth2Client });
+    const timeMin = new Date().toISOString();
 
-    const events = await calendar.events.list({
-      calendarId: "primary",
-      maxResults: 10,
-      singleEvents: true,
-      orderBy: "startTime"
+    const calendarListResponse = await calendar.calendarList.list({
+      minAccessRole: "reader",
+      showHidden: false
     });
 
-    res.json(events.data);
+    const calendars = (calendarListResponse.data.items || []).filter(item => !item.deleted);
+
+    const eventResponses = await Promise.all(
+      calendars.map(async calendarItem => {
+        try {
+          const response = await calendar.events.list({
+            calendarId: calendarItem.id,
+            maxResults: 50,
+            singleEvents: true,
+            orderBy: "startTime",
+            timeMin
+          });
+
+          return (response.data.items || []).map(event => ({
+            ...event,
+            sourceCalendarId: calendarItem.id,
+            sourceCalendarSummary: calendarItem.summary || "Calendar"
+          }));
+        } catch (calendarErr) {
+          console.error(calendarErr);
+          return [];
+        }
+      })
+    );
+
+    const allEvents = eventResponses.flat().sort((a, b) => {
+      const startA = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
+      const startB = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
+      return startA - startB;
+    });
+
+    res.json({
+      items: allEvents
+    });
   } catch (err) {
     console.error(err);
     res.send("Calendar error");
+  }
+});
+
+
+// DRIVE FILE SEARCH
+app.get("/api/drive", async (req, res) => {
+  try {
+    const token = req.query.token;
+    const query = req.query.q || "";
+    const starredOnly = req.query.starred === "1";
+
+    oAuth2Client.setCredentials({ access_token: token });
+
+    const drive = google.drive({ version: "v3", auth: oAuth2Client });
+
+    const escapedQuery = String(query).replace(/'/g, "\\'");
+    const queryParts = ["trashed = false"];
+
+    if (escapedQuery) {
+      queryParts.push(`name contains '${escapedQuery}'`);
+    }
+
+    if (starredOnly) {
+      queryParts.push("starred = true");
+    }
+
+    const files = await drive.files.list({
+      q: queryParts.join(" and "),
+      pageSize: 30,
+      fields: "files(id,name,webViewLink,starred,mimeType)",
+      orderBy: "modifiedTime desc"
+    });
+
+    res.json({ files: files.data.files || [] });
+  } catch (err) {
+    console.error(err);
+    res.send("Drive error");
+  }
+});
+
+// DRIVE STAR TOGGLE
+app.get("/api/drive/star", async (req, res) => {
+  try {
+    const token = req.query.token;
+    const fileId = req.query.fileId;
+    const starred = req.query.starred === "1";
+
+    if (!fileId) {
+      res.status(400).json({ error: "fileId is required" });
+      return;
+    }
+
+    oAuth2Client.setCredentials({ access_token: token });
+
+    const drive = google.drive({ version: "v3", auth: oAuth2Client });
+
+    const updated = await drive.files.update({
+      fileId,
+      requestBody: { starred },
+      fields: "id,name,starred"
+    });
+
+    res.json(updated.data);
+  } catch (err) {
+    console.error(err);
+    res.send("Drive star error");
   }
 });
 
