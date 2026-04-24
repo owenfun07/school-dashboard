@@ -23,6 +23,10 @@ function setupSidebar() {
   const toolsToggle = document.getElementById("tools-toggle");
   const toolsDropdown = document.getElementById("tools-dropdown");
 
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
+
   function openMenu() {
     sideMenu.classList.add("open");
     menuOverlay.classList.add("open");
