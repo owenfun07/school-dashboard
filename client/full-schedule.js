@@ -20,6 +20,12 @@ function setupSidebar() {
   const sideMenu = document.getElementById("side-menu");
   const menuClose = document.getElementById("menu-close");
   const menuOverlay = document.getElementById("menu-overlay");
+  const toolsToggle = document.getElementById("tools-toggle");
+  const toolsDropdown = document.getElementById("tools-dropdown");
+
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
 
   function openMenu() {
     sideMenu.classList.add("open");
@@ -34,6 +40,15 @@ function setupSidebar() {
   menuToggle.addEventListener("click", openMenu);
   menuClose.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
+
+  if (toolsToggle && toolsDropdown) {
+    toolsToggle.addEventListener("click", function () {
+      const isExpanded = toolsToggle.getAttribute("aria-expanded") === "true";
+      toolsToggle.setAttribute("aria-expanded", String(!isExpanded));
+      toolsDropdown.classList.toggle("hidden", isExpanded);
+      toolsToggle.textContent = isExpanded ? "Tools ▾" : "Tools ▴";
+    });
+  }
 }
 
 function eventStartDate(event) {

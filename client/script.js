@@ -25,6 +25,24 @@ let activeAssignmentFilter = "all";
 let activeDriveFilter = "all";
 let driveSearchQuery = "";
 
+async function fetchJsonSafe(url) {
+  const response = await fetch(url);
+  const text = await response.text();
+
+  try {
+    const json = JSON.parse(text);
+    if (!response.ok) {
+      throw new Error(json.error || `Request failed: ${response.status}`);
+    }
+    return json;
+  } catch (_err) {
+    if (!response.ok) {
+      throw new Error(text || `Request failed: ${response.status}`);
+    }
+    throw new Error("Invalid JSON response");
+  }
+}
+
 function formatDate(dateInput) {
   if (!dateInput) return "No due date";
   const date = new Date(dateInput);
@@ -137,10 +155,10 @@ async function loadAssignments(courseId, courseName, forceRefresh = false) {
     renderAssignments();
   }
 
-  const response = await fetch(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
-  const data = await response.json();
+  try {
+    const data = await fetchJsonSafe(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
 
-  assignmentCache = (data.courseWork || [])
+    assignmentCache = (data.courseWork || [])
     .map(work => ({
       ...work,
       due: courseWorkDueDate(work)
@@ -152,9 +170,15 @@ async function loadAssignments(courseId, courseName, forceRefresh = false) {
       return a.due - b.due;
     });
 
-  selectedCourse.textContent = `Assignments for ${courseName}`;
-  setLoader(assignmentLoader, false);
-  renderAssignments();
+    selectedCourse.textContent = `Assignments for ${courseName}`;
+    renderAssignments();
+  } catch (err) {
+    selectedCourse.textContent = `Could not load assignments: ${err.message}`;
+    assignmentCache = [];
+    renderAssignments();
+  } finally {
+    setLoader(assignmentLoader, false);
+  }
 }
 
 function renderEventGroups(events) {
@@ -219,16 +243,19 @@ async function loadCalendar(forceRefresh = false) {
 
   setLoader(calendarLoader, true);
 
-  const calendarRes = await fetch(`/api/calendar?token=${encodeURIComponent(token)}`);
-  const calendarData = await calendarRes.json();
-  const events = (calendarData.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b));
-
-  setLoader(calendarLoader, false);
-  renderEventGroups(events);
+  try {
+    const calendarData = await fetchJsonSafe(`/api/calendar?token=${encodeURIComponent(token)}`);
+    const events = (calendarData.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b));
+    renderEventGroups(events);
+  } catch (err) {
+    groupsContainer.innerHTML = `<div class="event-group"><h3>Error</h3><ul><li>Could not load calendar: ${err.message}</li></ul></div>`;
+  } finally {
+    setLoader(calendarLoader, false);
+  }
 }
 
 function setupAssignmentTabs() {
-  const tabButtons = document.querySelectorAll(".tab-btn");
+  const tabButtons = document.querySelectorAll("[data-assignment-filter]");
 
   tabButtons.forEach(button => {
     button.addEventListener("click", function () {
@@ -243,12 +270,12 @@ function setupAssignmentTabs() {
 }
 
 async function loadClasses() {
-  const classroomRes = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
-  const classroomData = await classroomRes.json();
-
   classesList.innerHTML = "";
 
-  if (classroomData.courses && classroomData.courses.length > 0) {
+  try {
+    const classroomData = await fetchJsonSafe(`/api/classroom?token=${encodeURIComponent(token)}`);
+
+    if (classroomData.courses && classroomData.courses.length > 0) {
     classroomData.courses.forEach(course => {
       const li = document.createElement("li");
       const button = document.createElement("button");
@@ -258,16 +285,22 @@ async function loadClasses() {
       li.appendChild(button);
       classesList.appendChild(li);
     });
-  } else {
+    } else {
+      const li = document.createElement("li");
+      li.textContent = "No classes found.";
+      classesList.appendChild(li);
+    }
+  } catch (err) {
     const li = document.createElement("li");
-    li.textContent = "No classes found.";
+    li.textContent = `Could not load classes: ${err.message}`;
     classesList.appendChild(li);
   }
 }
 
 
+
 async function toggleDriveStar(fileId, nextStarredValue) {
-  await fetch(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
+  await fetchJsonSafe(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
 }
 
 function renderDriveFiles(files) {
@@ -314,16 +347,23 @@ async function loadDriveFiles(forceRefresh = false) {
 
   setLoader(driveLoader, true);
 
-  const starred = activeDriveFilter === "starred" ? "1" : "0";
-  const response = await fetch(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}`);
-  const data = await response.json();
-
-  setLoader(driveLoader, false);
-  renderDriveFiles(data.files || []);
+  try {
+    const starred = activeDriveFilter === "starred" ? "1" : "0";
+    const data = await fetchJsonSafe(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}`);
+    renderDriveFiles(data.files || []);
+  } catch (err) {
+    driveFilesList.innerHTML = `<li>Could not load Drive files: ${err.message}</li>`;
+  } finally {
+    setLoader(driveLoader, false);
+  }
 }
 
 function setupDriveControls() {
   const driveTabButtons = document.querySelectorAll("[data-drive-filter]");
+
+  if (!driveSearchInput || !driveFilesList) {
+    return;
+  }
 
   driveTabButtons.forEach(button => {
     button.addEventListener("click", function () {
@@ -348,23 +388,35 @@ function setupDriveControls() {
 }
 
 function setupRefreshButtons() {
-  document.getElementById("assignment-refresh").addEventListener("click", function () {
-    if (selectedCourseId) {
-      loadAssignments(selectedCourseId, selectedCourseName, true);
-    }
-  });
+  const assignmentRefresh = document.getElementById("assignment-refresh");
+  const calendarRefresh = document.getElementById("calendar-refresh");
 
-  document.getElementById("calendar-refresh").addEventListener("click", function () {
-    loadCalendar(true);
-  });
+  if (assignmentRefresh) {
+    assignmentRefresh.addEventListener("click", function () {
+      if (selectedCourseId) {
+        loadAssignments(selectedCourseId, selectedCourseName, true);
+      }
+    });
+  }
+
+  if (calendarRefresh) {
+    calendarRefresh.addEventListener("click", function () {
+      loadCalendar(true);
+    });
+  }
 }
-
 
 function setupSidebar() {
   const menuToggle = document.getElementById("menu-toggle");
   const sideMenu = document.getElementById("side-menu");
   const menuClose = document.getElementById("menu-close");
   const menuOverlay = document.getElementById("menu-overlay");
+  const toolsToggle = document.getElementById("tools-toggle");
+  const toolsDropdown = document.getElementById("tools-dropdown");
+
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
 
   function openMenu() {
     sideMenu.classList.add("open");
@@ -379,20 +431,36 @@ function setupSidebar() {
   menuToggle.addEventListener("click", openMenu);
   menuClose.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
+
+  if (toolsToggle && toolsDropdown) {
+    toolsToggle.addEventListener("click", function () {
+      const isExpanded = toolsToggle.getAttribute("aria-expanded") === "true";
+      toolsToggle.setAttribute("aria-expanded", String(!isExpanded));
+      toolsDropdown.classList.toggle("hidden", isExpanded);
+      toolsToggle.textContent = isExpanded ? "Tools ▾" : "Tools ▴";
+    });
+  }
 }
 
 async function loadData() {
-  setupSidebar();
+  if (!classesList || !assignmentsList || !groupsContainer) {
+    return;
+  }
+
   setupAssignmentTabs();
   setupDriveControls();
   setupRefreshButtons();
-  await loadClasses();
-  await loadCalendar();
-  await loadDriveFiles();
+
+  if (!token) {
+    classesList.innerHTML = "<li>Please sign in again to load dashboard data.</li>";
+    assignmentsList.innerHTML = "<li>Please sign in again to load assignments.</li>";
+    driveFilesList.innerHTML = "<li>Please sign in again to load Drive files.</li>";
+    groupsContainer.innerHTML = `<div class="event-group"><h3>Not signed in</h3><ul><li>Please sign in again to load calendar.</li></ul></div>`;
+    return;
+  }
+
+  await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
 }
 
-if (!token) {
-  window.location.href = "/";
-} else {
-  loadData();
-}
+setupSidebar();
+loadData();

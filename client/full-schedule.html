@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TJ2NDQJZKN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-TJ2NDQJZKN');
+</script>
   <title>Full Schedule</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
   <link rel="stylesheet" href="style.css">
@@ -14,6 +23,11 @@
     <h3>Menu</h3>
     <a href="/dashboard">Dashboard</a>
     <a href="/full-schedule">Full Schedule</a>
+
+    <button id="tools-toggle" class="tools-toggle" aria-expanded="false">Tools ▾</button>
+    <div id="tools-dropdown" class="tools-dropdown hidden">
+      <a href="/source-citation">Source Citation Tool</a>
+    </div>
   </aside>
 
   <div id="menu-overlay" class="menu-overlay"></div>
