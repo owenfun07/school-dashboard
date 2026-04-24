@@ -365,6 +365,8 @@ function setupSidebar() {
   const sideMenu = document.getElementById("side-menu");
   const menuClose = document.getElementById("menu-close");
   const menuOverlay = document.getElementById("menu-overlay");
+  const toolsToggle = document.getElementById("tools-toggle");
+  const toolsDropdown = document.getElementById("tools-dropdown");
 
   function openMenu() {
     sideMenu.classList.add("open");
@@ -379,6 +381,59 @@ function setupSidebar() {
   menuToggle.addEventListener("click", openMenu);
   menuClose.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
+
+  if (toolsToggle && toolsDropdown) {
+    toolsToggle.addEventListener("click", function () {
+      const isExpanded = toolsToggle.getAttribute("aria-expanded") === "true";
+      toolsToggle.setAttribute("aria-expanded", String(!isExpanded));
+      toolsDropdown.classList.toggle("hidden", isExpanded);
+      toolsToggle.textContent = isExpanded ? "Tools ▾" : "Tools ▴";
+    });
+
+    li.appendChild(link);
+    li.appendChild(starButton);
+    driveFilesList.appendChild(li);
+  });
+}
+
+async function loadDriveFiles(forceRefresh = false) {
+  if (!forceRefresh) {
+    driveFilesList.innerHTML = "";
+  }
+
+  setLoader(driveLoader, true);
+
+  const starred = activeDriveFilter === "starred" ? "1" : "0";
+  const response = await fetch(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}`);
+  const data = await response.json();
+
+  setLoader(driveLoader, false);
+  renderDriveFiles(data.files || []);
+}
+
+function setupDriveControls() {
+  const driveTabButtons = document.querySelectorAll("[data-drive-filter]");
+
+  driveTabButtons.forEach(button => {
+    button.addEventListener("click", function () {
+      activeDriveFilter = button.dataset.driveFilter;
+      driveTabButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+      loadDriveFiles();
+    });
+  });
+
+  document.getElementById("drive-search-btn").addEventListener("click", function () {
+    driveSearchQuery = driveSearchInput.value.trim();
+    loadDriveFiles();
+  });
+
+  driveSearchInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      driveSearchQuery = driveSearchInput.value.trim();
+      loadDriveFiles();
+    }
+  });
 }
 
 async function loadData() {
