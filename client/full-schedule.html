@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Full Schedule</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <button id="menu-toggle" class="menu-toggle" aria-label="Open menu">☰</button>
+
+  <aside id="side-menu" class="side-menu">
+    <button id="menu-close" class="menu-close" aria-label="Close menu">×</button>
+    <h3>Menu</h3>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/full-schedule">Full Schedule</a>
+
+    <button id="tools-toggle" class="tools-toggle" aria-expanded="false">Tools ▾</button>
+    <div id="tools-dropdown" class="tools-dropdown hidden">
+      <a href="/source-citation">Source Citation Tool</a>
+    </div>
+  </aside>
+
+  <div id="menu-overlay" class="menu-overlay"></div>
+
+  <div class="dashboard full-schedule-page">
+    <div class="schedule-header">
+      <h1>Full Schedule</h1>
+      <div class="month-controls">
+        <button id="prev-month" class="refresh-btn">←</button>
+        <h2 id="month-title"></h2>
+        <button id="next-month" class="refresh-btn">→</button>
+        <button id="today-btn" class="refresh-btn">Today</button>
+      </div>
+    </div>
+
+    <div id="full-schedule-loader" class="loader"></div>
+
+    <div class="month-grid-header">
+      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+    <div id="month-grid" class="month-grid"></div>
+  </div>
+
+  <script src="full-schedule.js"></script>
+</body>
+</html>
