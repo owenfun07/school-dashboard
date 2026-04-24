@@ -397,6 +397,24 @@ function setupRefreshButtons() {
       loadAssignments(selectedCourseId, selectedCourseName, true);
     }
     });
+
+    li.appendChild(link);
+    li.appendChild(starButton);
+    driveFilesList.appendChild(li);
+  });
+}
+
+async function loadData() {
+  setupAssignmentTabs();
+  setupDriveControls();
+  setupRefreshButtons();
+
+  if (!token) {
+    classesList.innerHTML = "<li>Please sign in again to load dashboard data.</li>";
+    assignmentsList.innerHTML = "<li>Please sign in again to load assignments.</li>";
+    driveFilesList.innerHTML = "<li>Please sign in again to load Drive files.</li>";
+    groupsContainer.innerHTML = `<div class="event-group"><h3>Not signed in</h3><ul><li>Please sign in again to load calendar.</li></ul></div>`;
+    return;
   }
 
   if (calendarRefresh) {
