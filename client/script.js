@@ -425,7 +425,68 @@ function setupSidebar() {
       toolsDropdown.classList.toggle("hidden", isExpanded);
       toolsToggle.textContent = isExpanded ? "Tools ▾" : "Tools ▴";
     });
+  });
+
+  document.getElementById("drive-search-btn").addEventListener("click", function () {
+    driveSearchQuery = driveSearchInput.value.trim();
+    loadDriveFiles();
+  });
+
+  driveSearchInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      driveSearchQuery = driveSearchInput.value.trim();
+      loadDriveFiles();
+    }
+  });
+}
+
+function setupRefreshButtons() {
+  document.getElementById("assignment-refresh").addEventListener("click", function () {
+    if (selectedCourseId) {
+      loadAssignments(selectedCourseId, selectedCourseName, true);
+    }
+  });
+
+  document.getElementById("calendar-refresh").addEventListener("click", function () {
+    loadCalendar(true);
+  });
+}
+
+
+function setupSidebar() {
+  const menuToggle = document.getElementById("menu-toggle");
+  const sideMenu = document.getElementById("side-menu");
+  const menuClose = document.getElementById("menu-close");
+  const menuOverlay = document.getElementById("menu-overlay");
+  const toolsToggle = document.getElementById("tools-toggle");
+  const toolsDropdown = document.getElementById("tools-dropdown");
+
+  function openMenu() {
+    sideMenu.classList.add("open");
+    menuOverlay.classList.add("open");
   }
+
+  function closeMenu() {
+    sideMenu.classList.remove("open");
+    menuOverlay.classList.remove("open");
+  }
+
+  menuToggle.addEventListener("click", openMenu);
+  menuClose.addEventListener("click", closeMenu);
+  menuOverlay.addEventListener("click", closeMenu);
+
+  if (toolsToggle && toolsDropdown) {
+    toolsToggle.addEventListener("click", function () {
+      const isExpanded = toolsToggle.getAttribute("aria-expanded") === "true";
+      toolsToggle.setAttribute("aria-expanded", String(!isExpanded));
+      toolsDropdown.classList.toggle("hidden", isExpanded);
+      toolsToggle.textContent = isExpanded ? "Tools ▾" : "Tools ▴";
+    });
+
+    li.appendChild(link);
+    li.appendChild(starButton);
+    driveFilesList.appendChild(li);
+  });
 }
 
 async function loadData() {
