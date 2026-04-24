@@ -554,3 +554,43 @@ li {
   border-radius: 10px;
   padding: 12px;
 }
+
+.tools-toggle {
+  font-weight: 600;
+}
+
+.tools-dropdown a {
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 2px 0;
+}
+
+.tools-dropdown a:hover {
+  background: #f2f4f7;
+  text-decoration: none;
+}
+
+.citation-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.citation-history {
+  margin-top: 12px;
+  padding: 0;
+}
+
+.citation-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.citation-history-item span {
+  flex: 1;
+  font-size: 14px;
+}

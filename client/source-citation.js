@@ -1,6 +1,5 @@
 const params = new URLSearchParams(window.location.search);
 const urlToken = params.get("token");
-const savedToken = localStorage.getItem("access_token");
 
 if (urlToken) {
   localStorage.setItem("access_token", urlToken);
@@ -40,6 +39,7 @@ function setupSidebar() {
 }
 
 let citationStyle = "mla";
+let citationHistory = [];
 
 function formatDate(rawDate) {
   if (!rawDate) return "n.d.";
@@ -53,6 +53,38 @@ function generateMLA(author, title, site, date, url) {
 
 function generateAPA(author, title, site, date, url) {
   return `${author}. (${date}). ${title}. ${site}. ${url}`;
+}
+
+async function copyText(value) {
+  await navigator.clipboard.writeText(value);
+}
+
+function renderCitationHistory() {
+  const list = document.getElementById("citation-history");
+  list.innerHTML = "";
+
+  citationHistory.forEach(item => {
+    const li = document.createElement("li");
+    li.className = "citation-history-item";
+
+    const text = document.createElement("span");
+    text.textContent = item;
+
+    const copyButton = document.createElement("button");
+    copyButton.className = "tab-btn";
+    copyButton.textContent = "Copy";
+    copyButton.addEventListener("click", async function () {
+      await copyText(item);
+      copyButton.textContent = "Copied";
+      window.setTimeout(() => {
+        copyButton.textContent = "Copy";
+      }, 1200);
+    });
+
+    li.appendChild(text);
+    li.appendChild(copyButton);
+    list.appendChild(li);
+  });
 }
 
 function setupCitationTool() {
@@ -84,9 +116,24 @@ function setupCitationTool() {
     const url = urlInput.value.trim() || "No URL";
     const date = formatDate(dateInput.value);
 
-    output.textContent = citationStyle === "mla"
+    const citation = citationStyle === "mla"
       ? generateMLA(author, title, site, date, url)
       : generateAPA(author, title, site, date, url);
+
+    output.textContent = citation;
+    citationHistory.unshift(citation);
+    renderCitationHistory();
+  });
+
+  document.getElementById("citation-copy-all").addEventListener("click", async function () {
+    if (!citationHistory.length) return;
+
+    const joined = citationHistory.join("\n");
+    await copyText(joined);
+    this.textContent = "Copied all";
+    window.setTimeout(() => {
+      this.textContent = "Copy All";
+    }, 1200);
   });
 }
 
