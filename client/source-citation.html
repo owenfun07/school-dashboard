@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Source Citation Tool</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <button id="menu-toggle" class="menu-toggle" aria-label="Open menu">☰</button>
+
+  <aside id="side-menu" class="side-menu">
+    <button id="menu-close" class="menu-close" aria-label="Close menu">×</button>
+    <h3>Menu</h3>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/full-schedule">Full Schedule</a>
+
+    <button id="tools-toggle" class="tools-toggle" aria-expanded="true">Tools ▴</button>
+    <div id="tools-dropdown" class="tools-dropdown">
+      <a href="/source-citation">Source Citation Tool</a>
+    </div>
+  </aside>
+
+  <div id="menu-overlay" class="menu-overlay"></div>
+
+  <div class="dashboard">
+    <h1>Source Citation Tool</h1>
+    <div class="card citation-card">
+      <div class="citation-grid">
+        <input id="citation-author" placeholder="Author (Last, First)">
+        <input id="citation-title" placeholder="Page or article title">
+        <input id="citation-site" placeholder="Website name">
+        <input id="citation-url" placeholder="https://example.com/page">
+        <input id="citation-date" type="date" placeholder="Publication date">
+      </div>
+
+      <div class="assignment-tabs">
+        <button id="citation-mla" class="tab-btn active">MLA</button>
+        <button id="citation-apa" class="tab-btn">APA</button>
+      </div>
+
+      <div class="citation-actions">
+        <button id="citation-generate" class="google-btn">Generate Citation</button>
+        <button id="citation-copy-all" class="tab-btn">Copy All</button>
+      </div>
+
+      <p id="citation-output" class="citation-output">Your citation will appear here.</p>
+      <ul id="citation-history" class="citation-history"></ul>
+    </div>
+  </div>
+
+  <script src="source-citation.js"></script>
+</body>
+</html>
