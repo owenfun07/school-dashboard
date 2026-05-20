@@ -7,13 +7,14 @@
 </head>
 <body>
 
+
   <!-- Help Icon -->
   <a href="/about" class="help-btn">?</a>
 
   <div class="container login-container">
     <h1 class="main-title">Welcome to Your Home for Classroom Resources</h1>
 
-    <a href="/auth/google" class="google-btn">
+    <a href="/auth/google" class="google-btn" id="google-signin-btn">
       <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
       <span>Sign in with Google</span>
     </a>
@@ -25,6 +26,63 @@
     <span>•</span>
     <a href="/terms">Terms of Service</a>
   </div>
+
+  <script>
+    const googleButton = document.getElementById("google-signin-btn");
+    const googleButtonText = googleButton.querySelector("span");
+    const savedToken = localStorage.getItem("access_token");
+
+    if (savedToken) {
+      window.location.href = "/dashboard";
+    }
+
+    function setAuthLoading(isLoading) {
+      if (isLoading) {
+        googleButton.classList.add("is-loading");
+        googleButtonText.textContent = "Loading...";
+      } else {
+        googleButton.classList.remove("is-loading");
+        googleButtonText.textContent = "Sign in with Google";
+      }
+    }
+
+    googleButton.addEventListener("click", function (event) {
+      event.preventDefault();
+      setAuthLoading(true);
+
+      const popupWidth = 500;
+      const popupHeight = 650;
+      const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+      const top = window.screenY + (window.outerHeight - popupHeight) / 2;
+
+      const popup = window.open(
+        "/auth/google?popup=1",
+        "google-auth-popup",
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
+      );
+
+      if (!popup) {
+        window.location.href = "/auth/google";
+        return;
+      }
+
+      const popupCheck = window.setInterval(function () {
+        if (popup.closed) {
+          window.clearInterval(popupCheck);
+          setAuthLoading(false);
+        }
+      }, 500);
+    });
+
+    window.addEventListener("message", function (event) {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data || event.data.type !== "google-auth-success") return;
+      if (!event.data.token) return;
+
+      localStorage.setItem("access_token", event.data.token);
+      window.location.href = "/dashboard";
+    });
+  </script>
 
 </body>
 </html>
