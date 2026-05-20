@@ -306,7 +306,7 @@ async function loadCalendar(forceRefresh = false) {
 }
 
 function setupAssignmentTabs() {
-  const tabButtons = document.querySelectorAll(".tab-btn");
+  const tabButtons = document.querySelectorAll("[data-assignment-filter]");
 
   tabButtons.forEach(button => {
     button.addEventListener("click", function () {
@@ -335,6 +335,53 @@ async function loadClasses() {
       button.addEventListener("click", () => loadAssignments(course.id, course.name));
       li.appendChild(button);
       classesList.appendChild(li);
+    }
+  } catch (err) {
+    const li = document.createElement("li");
+    li.textContent = `Could not load classes: ${err.message}`;
+    classesList.appendChild(li);
+
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
+      showReloginPrompt(classesList);
+    }
+  }
+}
+
+
+
+async function toggleDriveStar(fileId, nextStarredValue) {
+  await fetchJsonSafe(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
+}
+
+function renderDriveFiles(files) {
+  driveFilesList.innerHTML = "";
+
+  if (!files.length) {
+    const li = document.createElement("li");
+    li.textContent = "No files found.";
+    driveFilesList.appendChild(li);
+    return;
+  }
+
+  files.forEach(file => {
+    const li = document.createElement("li");
+    li.className = "drive-file-item";
+
+    const link = document.createElement("a");
+    link.href = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.className = "drive-file-link";
+    link.textContent = file.name || "Untitled file";
+
+    const starButton = document.createElement("button");
+    starButton.className = "star-btn";
+    starButton.textContent = file.starred ? "★" : "☆";
+    starButton.title = file.starred ? "Unstar" : "Star";
+    starButton.addEventListener("click", async () => {
+      starButton.disabled = true;
+      await toggleDriveStar(file.id, !file.starred);
+      await loadDriveFiles(true);
     });
     } else {
       const li = document.createElement("li");
@@ -430,6 +477,37 @@ function setupDriveControls() {
       driveTabButtons.forEach(btn => btn.classList.remove("active"));
       button.classList.add("active");
       loadDriveFiles();
+    });
+  });
+
+  document.getElementById("drive-search-btn").addEventListener("click", function () {
+    driveSearchQuery = driveSearchInput.value.trim();
+    loadDriveFiles();
+  });
+
+  driveSearchInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      driveSearchQuery = driveSearchInput.value.trim();
+      loadDriveFiles();
+    }
+  });
+}
+
+function setupRefreshButtons() {
+  const assignmentRefresh = document.getElementById("assignment-refresh");
+  const calendarRefresh = document.getElementById("calendar-refresh");
+
+  if (assignmentRefresh) {
+    assignmentRefresh.addEventListener("click", function () {
+    if (selectedCourseId) {
+      loadAssignments(selectedCourseId, selectedCourseName, true);
+    }
+    });
+  }
+
+  if (calendarRefresh) {
+    calendarRefresh.addEventListener("click", function () {
+      loadCalendar(true);
     });
   });
 
@@ -585,6 +663,53 @@ async function loadData() {
     assignmentsList.innerHTML = "<li>Please sign in again to load assignments.</li>";
     driveFilesList.innerHTML = "<li>Please sign in again to load Drive files.</li>";
     groupsContainer.innerHTML = `<div class="event-group"><h3>Not signed in</h3><ul><li>Please sign in again to load calendar.</li></ul></div>`;
+    return;
+  }
+
+  await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
+}
+
+
+function setupSidebar() {
+  const menuToggle = document.getElementById("menu-toggle");
+  const sideMenu = document.getElementById("side-menu");
+  const menuClose = document.getElementById("menu-close");
+  const menuOverlay = document.getElementById("menu-overlay");
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
+
+  function openMenu() {
+    sideMenu.classList.add("open");
+    menuOverlay.classList.add("open");
+  }
+
+  function closeMenu() {
+    sideMenu.classList.remove("open");
+    menuOverlay.classList.remove("open");
+  }
+
+  menuToggle.addEventListener("click", openMenu);
+  menuClose.addEventListener("click", closeMenu);
+  menuOverlay.addEventListener("click", closeMenu);
+
+}
+
+async function loadData() {
+  if (!classesList || !assignmentsList || !groupsContainer) {
+    return;
+  }
+
+  setupAssignmentTabs();
+  setupDriveControls();
+  setupRefreshButtons();
+
+  if (!token) {
+    classesList.innerHTML = "<li>Please sign in again to load dashboard data.</li>";
+    assignmentsList.innerHTML = "<li>Please sign in again to load assignments.</li>";
+    driveFilesList.innerHTML = "<li>Please sign in again to load Drive files.</li>";
+    groupsContainer.innerHTML = `<div class="event-group"><h3>Not signed in</h3><ul><li>Please sign in again to load calendar.</li></ul></div>`;
+    showReloginPrompt(groupsContainer);
     return;
   }
 
