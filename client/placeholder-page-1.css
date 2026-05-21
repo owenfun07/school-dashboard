@@ -1,80 +1,111 @@
-.card {
-  background: var(--card-bg, #1e1e1e);
-  border-radius: 15px;
-  padding: 25px;
-  margin-bottom: 20px;
+.card{
+  background:#1f1f1f;
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:20px;
 }
 
-.card h1 {
-  margin-top: 0;
+.card h1{
+  margin-top:0;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
-  gap: 12px;
+.top-tools{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:
+  repeat(
+    auto-fit,
+    minmax(220px,1fr)
+  );
+  gap:12px;
 }
 
 .form-grid input,
-.form-grid select {
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  background: #2b2b2b;
-  color: white;
+.form-grid select,
+.top-tools input,
+#search,
+textarea{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#2d2d2d;
+  color:white;
+  box-sizing:border-box;
 }
 
-.form-grid button {
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
+button{
+  padding:12px 16px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  transition:.2s;
 }
 
-.toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+button:hover{
+  opacity:.85;
 }
 
-.toolbar button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
+.toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:20px;
 }
 
-.citation-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #2b2b2b;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 12px;
+.citation-item{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:15px;
+  border-radius:12px;
+  background:#2d2d2d;
+  margin-bottom:12px;
 }
 
-.citation-text {
-  flex: 1;
-  word-break: break-word;
-  line-height: 1.5;
+.citation-content{
+  flex:1;
 }
 
-.deleteBtn {
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
+.citation-text{
+  line-height:1.6;
+  word-break:break-word;
 }
 
-@media (max-width: 700px) {
+.editBtn,
+.deleteBtn{
+  padding:8px 12px;
+}
 
-  .citation-item {
-    flex-direction: column;
+textarea{
+  min-height:120px;
+  resize:vertical;
+  margin-bottom:10px;
+}
+
+hr{
+  margin:25px 0;
+  border:none;
+  border-top:1px solid rgba(255,255,255,.15);
+}
+
+@media (max-width:700px){
+
+  .top-tools{
+    flex-direction:column;
   }
 
-  .toolbar {
-    flex-direction: column;
+  .toolbar{
+    flex-direction:column;
+  }
+
+  .citation-item{
+    flex-direction:column;
   }
 
 }
