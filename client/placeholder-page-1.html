@@ -1,33 +1,214 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Placeholder Page 1</title>
+  <title>Source Citation Tool</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="placeholder-page-1.css">
 </head>
 <body>
-  <button id="menu-toggle" class="menu-toggle" aria-label="Open menu">☰</button>
 
-  <aside id="side-menu" class="side-menu">
-    <button id="menu-close" class="menu-close" aria-label="Close menu">×</button>
-    <h3>Menu</h3>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/full-schedule">Full Schedule</a>
-    <a href="/placeholder-page-1">Placeholder Page 1</a>
-    <a href="/placeholder-page-2">Placeholder Page 2</a>
-  </aside>
+<button id="menu-toggle" class="menu-toggle">☰</button>
 
-  <div id="menu-overlay" class="menu-overlay"></div>
+<aside id="side-menu" class="side-menu">
+  <button id="menu-close" class="menu-close">×</button>
+  <h3>Menu</h3>
+  <a href="/dashboard">Dashboard</a>
+  <a href="/full-schedule">Full Schedule</a>
+  <a href="/placeholder-page-1">Citation Tool</a>
+</aside>
 
-  <div class="dashboard">
-    <div class="card placeholder-card">
-      <h1>Placeholder Page 1</h1>
-      <p>This page is ready for you to build.</p>
-      <p>Edit <code>client/placeholder-page-1.html</code> and <code>client/placeholder-page-1.css</code>.</p>
+<div id="menu-overlay" class="menu-overlay"></div>
+
+<div class="dashboard">
+
+  <div class="card">
+
+    <h1>Source Citation Tool</h1>
+
+    <div class="form-grid">
+
+      <input id="title" placeholder="Page Title">
+
+      <input id="author" placeholder="Author">
+
+      <input id="publisher" placeholder="Publisher / Website">
+
+      <input id="url" placeholder="https://example.com">
+
+      <input id="publishDate" type="date">
+
+      <input id="accessDate" type="date">
+
+      <select id="style">
+        <option value="mla">MLA</option>
+        <option value="apa">APA</option>
+        <option value="chicago">Chicago</option>
+      </select>
+
+      <button id="addSource">
+        Add Citation
+      </button>
+
     </div>
+
   </div>
 
-  <script src="full-schedule.js"></script>
+  <div class="card">
+
+    <div class="toolbar">
+
+      <button id="copySelected">
+        Copy Selected
+      </button>
+
+      <button id="copyAll">
+        Copy All
+      </button>
+
+    </div>
+
+    <div id="citationList"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+const list = document.getElementById("citationList");
+
+function saveSources() {
+  localStorage.setItem(
+    "citations",
+    list.innerHTML
+  );
+}
+
+function loadSources() {
+  list.innerHTML =
+    localStorage.getItem("citations") || "";
+}
+
+function formatCitation(data) {
+
+  const date =
+    data.publishDate || "n.d.";
+
+  if(data.style === "apa") {
+    return `${data.author}. (${date}). ${data.title}. ${data.publisher}. ${data.url}`;
+  }
+
+  if(data.style === "chicago") {
+    return `${data.author}. "${data.title}." ${data.publisher}. Accessed ${data.accessDate}. ${data.url}`;
+  }
+
+  return `${data.author}. "${data.title}." ${data.publisher}, ${date}, ${data.url}. Accessed ${data.accessDate}.`;
+}
+
+document
+.getElementById("addSource")
+.addEventListener("click", () => {
+
+  const data = {
+    title:
+      document.getElementById("title").value,
+    author:
+      document.getElementById("author").value,
+    publisher:
+      document.getElementById("publisher").value,
+    url:
+      document.getElementById("url").value,
+    publishDate:
+      document.getElementById("publishDate").value,
+    accessDate:
+      document.getElementById("accessDate").value,
+    style:
+      document.getElementById("style").value
+  };
+
+  const citation =
+    formatCitation(data);
+
+  const item =
+    document.createElement("div");
+
+  item.className =
+    "citation-item";
+
+  item.innerHTML = `
+    <input type="checkbox" class="citationCheck">
+
+    <div class="citation-text">
+      ${citation}
+    </div>
+
+    <button class="deleteBtn">
+      Delete
+    </button>
+  `;
+
+  item
+    .querySelector(".deleteBtn")
+    .addEventListener("click", () => {
+      item.remove();
+      saveSources();
+    });
+
+  list.prepend(item);
+
+  saveSources();
+
+});
+
+document
+.getElementById("copySelected")
+.addEventListener("click", async () => {
+
+  const selected =
+    [...document.querySelectorAll(".citation-item")]
+
+    .filter(
+      item =>
+      item.querySelector(".citationCheck").checked
+    )
+
+    .map(
+      item =>
+      item.querySelector(".citation-text").textContent
+    )
+
+    .join("\n\n");
+
+  if(selected) {
+    await navigator.clipboard.writeText(selected);
+    alert("Selected citations copied.");
+  }
+
+});
+
+document
+.getElementById("copyAll")
+.addEventListener("click", async () => {
+
+  const all =
+    [...document.querySelectorAll(".citation-text")]
+
+    .map(el => el.textContent)
+
+    .join("\n\n");
+
+  await navigator.clipboard.writeText(all);
+
+  alert("All citations copied.");
+
+});
+
+loadSources();
+
+</script>
+
+<script src="full-schedule.js"></script>
+
 </body>
 </html>
