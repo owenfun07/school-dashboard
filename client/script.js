@@ -509,6 +509,55 @@ function setupRefreshButtons() {
       loadCalendar(true);
     });
   }
+
+  if (calendarRefresh) {
+    calendarRefresh.addEventListener("click", function () {
+      loadCalendar(true);
+    });
+  }
+}
+
+
+function setupSidebar() {
+  const menuToggle = document.getElementById("menu-toggle");
+  const sideMenu = document.getElementById("side-menu");
+  const menuClose = document.getElementById("menu-close");
+  const menuOverlay = document.getElementById("menu-overlay");
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
+
+  function openMenu() {
+    sideMenu.classList.add("open");
+    menuOverlay.classList.add("open");
+  }
+
+  function closeMenu() {
+    sideMenu.classList.remove("open");
+    menuOverlay.classList.remove("open");
+  }
+
+  menuToggle.addEventListener("click", openMenu);
+  menuClose.addEventListener("click", closeMenu);
+  menuOverlay.addEventListener("click", closeMenu);
+
+}
+
+async function loadData() {
+  if (!classesList || !assignmentsList || !groupsContainer) {
+    return;
+  }
+
+  setupAssignmentTabs();
+  setupDriveControls();
+  setupRefreshButtons();
+
+  if (!token) {
+    window.location.href = "/";
+    return;
+  }
+
+  await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
 }
 
 
