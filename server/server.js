@@ -214,6 +214,7 @@ app.get("/api/drive", async (req, res) => {
     const token = req.query.token;
     const query = req.query.q || "";
     const starredOnly = req.query.starred === "1";
+    const recentOnly = req.query.recent === "1";
 
     oAuth2Client.setCredentials({ access_token: token });
 
@@ -233,8 +234,8 @@ app.get("/api/drive", async (req, res) => {
     const files = await drive.files.list({
       q: queryParts.join(" and "),
       pageSize: 30,
-      fields: "files(id,name,webViewLink,starred,mimeType)",
-      orderBy: "modifiedTime desc"
+      fields: "files(id,name,webViewLink,thumbnailLink,starred,mimeType,viewedByMeTime,modifiedTime)",
+      orderBy: recentOnly ? "viewedByMeTime desc" : "modifiedTime desc"
     });
 
     res.json({ files: files.data.files || [] });

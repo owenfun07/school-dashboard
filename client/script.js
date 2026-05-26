@@ -22,8 +22,10 @@ let selectedCourseId = null;
 let selectedCourseName = null;
 let assignmentCache = [];
 let activeAssignmentFilter = "all";
-let activeDriveFilter = "all";
+let activeDriveFilter = "recent";
 let driveSearchQuery = "";
+let driveHasSearched = false;
+let driveViewMode = "list";
 
 async function fetchJsonSafe(url) {
   const response = await fetch(url);
@@ -364,9 +366,19 @@ async function toggleDriveStar(fileId, nextStarredValue) {
 
 function renderDriveFiles(files) {
   driveFilesList.innerHTML = "";
+  driveFilesList.classList.toggle("drive-grid", driveViewMode === "grid");
+
+  if (!driveHasSearched && activeDriveFilter === "recent") {
+    const li = document.createElement("li");
+    li.className = "drive-empty";
+    li.textContent = "Search something to get started.";
+    driveFilesList.appendChild(li);
+    return;
+  }
 
   if (!files.length) {
     const li = document.createElement("li");
+    li.className = "drive-empty";
     li.textContent = "No files found.";
     driveFilesList.appendChild(li);
     return;
@@ -381,7 +393,24 @@ function renderDriveFiles(files) {
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.className = "drive-file-link";
-    link.textContent = file.name || "Untitled file";
+
+    if (driveViewMode === "grid") {
+      const preview = document.createElement("div");
+      preview.className = "drive-preview";
+      if (file.thumbnailLink) {
+        const img = document.createElement("img");
+        img.src = file.thumbnailLink;
+        img.alt = file.name || "Drive file preview";
+        preview.appendChild(img);
+      } else {
+        preview.textContent = "No preview";
+      }
+      link.appendChild(preview);
+    }
+
+    const name = document.createElement("span");
+    name.textContent = file.name || "Untitled file";
+    link.appendChild(name);
 
     const starButton = document.createElement("button");
     starButton.className = "star-btn";
@@ -408,7 +437,8 @@ async function loadDriveFiles(forceRefresh = false) {
 
   try {
     const starred = activeDriveFilter === "starred" ? "1" : "0";
-    const data = await fetchJsonSafe(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}`);
+    const recent = activeDriveFilter === "recent" ? "1" : "0";
+    const data = await fetchJsonSafe(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}&recent=${recent}`);
     renderDriveFiles(data.files || []);
   } catch (err) {
     driveFilesList.innerHTML = `<li>Could not load Drive files: ${err.message}</li>`;
@@ -437,14 +467,26 @@ function setupDriveControls() {
     });
   });
 
+
+  const driveViewToggle = document.getElementById("drive-view-toggle");
+  if (driveViewToggle) {
+    driveViewToggle.addEventListener("click", function () {
+      driveViewMode = driveViewMode === "list" ? "grid" : "list";
+      driveViewToggle.textContent = driveViewMode === "grid" ? "☰ List" : "▦ Grid";
+      loadDriveFiles(true);
+    });
+  }
+
   document.getElementById("drive-search-btn").addEventListener("click", function () {
     driveSearchQuery = driveSearchInput.value.trim();
+    driveHasSearched = true;
     loadDriveFiles();
   });
 
   driveSearchInput.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
       driveSearchQuery = driveSearchInput.value.trim();
+      driveHasSearched = true;
       loadDriveFiles();
     }
   });
@@ -467,6 +509,55 @@ function setupRefreshButtons() {
       loadCalendar(true);
     });
   }
+
+  if (calendarRefresh) {
+    calendarRefresh.addEventListener("click", function () {
+      loadCalendar(true);
+    });
+  }
+}
+
+
+function setupSidebar() {
+  const menuToggle = document.getElementById("menu-toggle");
+  const sideMenu = document.getElementById("side-menu");
+  const menuClose = document.getElementById("menu-close");
+  const menuOverlay = document.getElementById("menu-overlay");
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
+
+  function openMenu() {
+    sideMenu.classList.add("open");
+    menuOverlay.classList.add("open");
+  }
+
+  function closeMenu() {
+    sideMenu.classList.remove("open");
+    menuOverlay.classList.remove("open");
+  }
+
+  menuToggle.addEventListener("click", openMenu);
+  menuClose.addEventListener("click", closeMenu);
+  menuOverlay.addEventListener("click", closeMenu);
+
+}
+
+async function loadData() {
+  if (!classesList || !assignmentsList || !groupsContainer) {
+    return;
+  }
+
+  setupAssignmentTabs();
+  setupDriveControls();
+  setupRefreshButtons();
+
+  if (!token) {
+    window.location.href = "/";
+    return;
+  }
+
+  await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
 }
 
 

@@ -49,7 +49,10 @@
         <option value="apa">APA</option>
         <option value="chicago">Chicago</option>
       </select>
-      <button id="addSource" class="add-btn">Add Citation</button>
+      <div class="citation-form-actions">
+        <button id="addSource" class="add-btn">Add Citation</button>
+        <button id="clearForm" type="button" class="tab-btn">Clear Form</button>
+      </div>
     </div>
   </div>
 
@@ -89,6 +92,18 @@ function formatCitation(source) {
     default:
       return `${source.author}. "${source.title}." ${source.publisher}, ${source.publishDate}, ${source.url}. Accessed ${source.accessDate}.`;
   }
+}
+
+
+function clearCitationForm() {
+  title.value = "";
+  author.value = "";
+  publisher.value = "";
+  url.value = "";
+  publishDate.value = "";
+  accessDate.value = "";
+  style.value = "mla";
+  urlInput.value = "";
 }
 
 function render() {
@@ -151,9 +166,12 @@ document.getElementById("addSource").onclick = () => {
 
   saveData();
   render();
+  clearCitationForm();
 };
 
 document.getElementById("search").oninput = render;
+
+document.getElementById("clearForm").onclick = clearCitationForm;
 
 document.getElementById("globalStyle").onchange = () => {
   const newStyle = globalStyle.value;
