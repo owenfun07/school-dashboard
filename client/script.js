@@ -1,85 +1,236 @@
-
+// ===================== NOTES SYSTEM =====================
 
 const notesLayer = document.getElementById("notes-layer");
 const notesToggleBtn = document.getElementById("notes-toggle");
 const addNoteBtn = document.getElementById("add-note");
-let notesEnabled = false;
+const notesTray = document.getElementById("notes-tray");
+
+let notesVisible = false;
 let notes = JSON.parse(localStorage.getItem("dashboard_notes") || "[]");
 
-function saveNotes() { localStorage.setItem("dashboard_notes", JSON.stringify(notes)); }
+function saveNotes() {
+  localStorage.setItem("dashboard_notes", JSON.stringify(notes));
+}
+
+function getNoteById(id) {
+  return notes.find(n => n.id === id);
+}
+
+function makeDraggable(el, handleEl, noteId) {
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  handleEl.addEventListener("mousedown", function (e) {
+    if (e.target.closest("button") || e.target.closest("[contenteditable]")) return;
+    dragging = true;
+    offsetX = e.clientX - el.offsetLeft;
+    offsetY = e.clientY - el.offsetTop;
+    el.style.transition = "none";
+    el.style.zIndex = 9999;
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+    const x = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, e.clientX - offsetX));
+    const y = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, e.clientY - offsetY));
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!dragging) return;
+    dragging = false;
+    el.style.zIndex = "";
+    const note = getNoteById(noteId);
+    if (note) {
+      note.x = el.offsetLeft;
+      note.y = el.offsetTop;
+      saveNotes();
+    }
+  });
+}
+
+function createNoteEl(note) {
+  const el = document.createElement("div");
+  el.className = "sticky-note" + (note.minimized ? " minimized" : "");
+  el.style.left = note.x + "px";
+  el.style.top = note.y + "px";
+  el.dataset.id = String(note.id);
+
+  // Header
+  const head = document.createElement("div");
+  head.className = "sticky-head";
+
+  // Editable title
+  const title = document.createElement("span");
+  title.className = "sticky-title";
+  title.textContent = note.name || "Note";
+  title.title = "Click to rename";
+  title.setAttribute("contenteditable", "true");
+  title.setAttribute("spellcheck", "false");
+
+  title.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); title.blur(); }
+  });
+
+  title.addEventListener("blur", function () {
+    const trimmed = title.textContent.trim();
+    const n = getNoteById(note.id);
+    if (n) {
+      n.name = trimmed || "Note";
+      title.textContent = n.name;
+      saveNotes();
+      updateTray();
+    }
+  });
+
+  // Minimize button
+  const minimizeBtn = document.createElement("button");
+  minimizeBtn.className = "note-action-btn";
+  minimizeBtn.title = note.minimized ? "Restore" : "Minimize";
+  minimizeBtn.innerHTML = note.minimized ? "▲" : "▼";
+  minimizeBtn.addEventListener("click", function () {
+    const n = getNoteById(note.id);
+    if (!n) return;
+    n.minimized = !n.minimized;
+    saveNotes();
+    el.classList.toggle("minimized", n.minimized);
+    minimizeBtn.innerHTML = n.minimized ? "▲" : "▼";
+    minimizeBtn.title = n.minimized ? "Restore" : "Minimize";
+    updateTray();
+  });
+
+  // Delete button
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "note-action-btn note-delete-btn";
+  deleteBtn.title = "Delete note";
+  deleteBtn.innerHTML = "×";
+  deleteBtn.addEventListener("click", function () {
+    notes = notes.filter(n => n.id !== note.id);
+    saveNotes();
+    el.remove();
+    updateTray();
+  });
+
+  head.appendChild(title);
+  head.appendChild(minimizeBtn);
+  head.appendChild(deleteBtn);
+
+  // Body
+  const body = document.createElement("div");
+  body.className = "sticky-body";
+
+  const ta = document.createElement("textarea");
+  ta.className = "sticky-text";
+  ta.placeholder = "Write something...";
+  ta.value = note.text || "";
+
+  ta.addEventListener("input", function () {
+    const n = getNoteById(note.id);
+    if (n) { n.text = ta.value; saveNotes(); }
+  });
+
+  body.appendChild(ta);
+  el.appendChild(head);
+  el.appendChild(body);
+
+  makeDraggable(el, head, note.id);
+
+  return el;
+}
 
 function renderNotes() {
   if (!notesLayer) return;
   notesLayer.querySelectorAll(".sticky-note").forEach(el => el.remove());
+
   notes.forEach(note => {
-    const el = document.createElement("div");
-    el.className = "sticky-note";
-    el.style.left = `${note.x}px`;
-    el.style.top = `${note.y}px`;
-    el.dataset.id = String(note.id);
-    el.innerHTML = `<div class="sticky-head"><span>Note</span><button class="note-close" type="button">×</button></div><textarea class="sticky-text" placeholder="Type here...">${note.text || ""}</textarea>`;
+    const el = createNoteEl(note);
+    notesLayer.appendChild(el);
+  });
 
-    const ta = el.querySelector('.sticky-text');
-    ta.addEventListener('input', function () {
-      const n = notes.find(n => n.id === note.id);
-      if (n) { n.text = ta.value; saveNotes(); }
-    });
+  updateTray();
+}
 
-    el.querySelector('.note-close').addEventListener('click', function () {
-      notes = notes.filter(n => n.id !== note.id);
+function updateTray() {
+  if (!notesTray) return;
+  notesTray.innerHTML = "";
+
+  const minimized = notes.filter(n => n.minimized);
+
+  if (minimized.length === 0) {
+    notesTray.style.display = "none";
+    return;
+  }
+
+  notesTray.style.display = "flex";
+
+  minimized.forEach(note => {
+    const chip = document.createElement("button");
+    chip.className = "tray-chip";
+    chip.textContent = note.name || "Note";
+    chip.title = "Restore note";
+    chip.addEventListener("click", function () {
+      note.minimized = false;
       saveNotes();
       renderNotes();
     });
-
-    let dragging = false; let offsetX = 0; let offsetY = 0;
-    const head = el.querySelector('.sticky-head');
-    head.addEventListener('mousedown', function (e) {
-      dragging = true;
-      offsetX = e.clientX - el.offsetLeft;
-      offsetY = e.clientY - el.offsetTop;
-    });
-    document.addEventListener('mousemove', function (e) {
-      if (!dragging || !notesEnabled) return;
-      el.style.left = `${Math.max(0, e.clientX - offsetX)}px`;
-      el.style.top = `${Math.max(0, e.clientY - offsetY)}px`;
-    });
-    document.addEventListener('mouseup', function () {
-      if (!dragging) return;
-      dragging = false;
-      const n = notes.find(n => n.id === note.id);
-      if (n) { n.x = el.offsetLeft; n.y = el.offsetTop; saveNotes(); }
-    });
-
-    notesLayer.appendChild(el);
+    notesTray.appendChild(chip);
   });
 }
 
 function toggleNotes(force) {
   if (!notesLayer) return;
-  notesEnabled = typeof force === 'boolean' ? force : !notesEnabled;
-  notesLayer.classList.toggle('hidden', !notesEnabled);
-  if (notesToggleBtn) notesToggleBtn.classList.toggle('active', notesEnabled);
-  if (notesEnabled) renderNotes();
+  notesVisible = typeof force === "boolean" ? force : !notesVisible;
+  notesLayer.classList.toggle("hidden", !notesVisible);
+  if (notesToggleBtn) notesToggleBtn.classList.toggle("active", notesVisible);
+  if (notesVisible) renderNotes();
 }
 
 function addNote() {
   const id = Date.now();
-  notes.push({ id, x: 120 + (notes.length % 4) * 30, y: 120 + (notes.length % 4) * 30, text: "" });
+  const col = notes.length % 4;
+  notes.push({
+    id,
+    name: "Note",
+    text: "",
+    x: 120 + col * 40,
+    y: 120 + col * 40,
+    minimized: false
+  });
   saveNotes();
   renderNotes();
+
+  // Focus the new note's title so user can name it immediately
+  window.setTimeout(function () {
+    const el = notesLayer.querySelector(`.sticky-note[data-id="${id}"] .sticky-title`);
+    if (el) {
+      el.focus();
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }, 50);
 }
 
 function setupNotes() {
   if (!notesLayer || !notesToggleBtn || !addNoteBtn) return;
-  notesToggleBtn.addEventListener('click', () => toggleNotes());
-  addNoteBtn.addEventListener('click', addNote);
-  document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
+  notesToggleBtn.addEventListener("click", () => toggleNotes());
+  addNoteBtn.addEventListener("click", addNote);
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n") {
       e.preventDefault();
       toggleNotes();
     }
   });
 }
+
+// ===================== END NOTES SYSTEM =====================
+
+
 const params = new URLSearchParams(window.location.search);
 const urlToken = params.get("token");
 const savedToken = localStorage.getItem("access_token");
@@ -286,16 +437,16 @@ async function loadAssignments(courseId, courseName, forceRefresh = false) {
     const data = await fetchJsonSafe(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
 
     assignmentCache = (data.courseWork || [])
-    .map(work => ({
-      ...work,
-      due: courseWorkDueDate(work)
-    }))
-    .sort((a, b) => {
-      if (!a.due && !b.due) return 0;
-      if (!a.due) return 1;
-      if (!b.due) return -1;
-      return a.due - b.due;
-    });
+      .map(work => ({
+        ...work,
+        due: courseWorkDueDate(work)
+      }))
+      .sort((a, b) => {
+        if (!a.due && !b.due) return 0;
+        if (!a.due) return 1;
+        if (!b.due) return -1;
+        return a.due - b.due;
+      });
 
     selectedCourse.textContent = `Assignments for ${courseName}`;
     renderAssignments();
@@ -440,8 +591,6 @@ async function loadClasses() {
   }
 }
 
-
-
 async function toggleDriveStar(fileId, nextStarredValue) {
   await fetchJsonSafe(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
 }
@@ -549,7 +698,6 @@ function setupDriveControls() {
     });
   });
 
-
   const driveViewToggle = document.getElementById("drive-view-toggle");
   if (driveViewToggle) {
     driveViewToggle.addEventListener("click", function () {
@@ -580,9 +728,9 @@ function setupRefreshButtons() {
 
   if (assignmentRefresh) {
     assignmentRefresh.addEventListener("click", function () {
-    if (selectedCourseId) {
-      loadAssignments(selectedCourseId, selectedCourseName, true);
-    }
+      if (selectedCourseId) {
+        loadAssignments(selectedCourseId, selectedCourseName, true);
+      }
     });
   }
 
@@ -592,7 +740,6 @@ function setupRefreshButtons() {
     });
   }
 }
-
 
 function setupSidebar() {
   const menuToggle = document.getElementById("menu-toggle");
@@ -616,7 +763,6 @@ function setupSidebar() {
   menuToggle.addEventListener("click", openMenu);
   menuClose.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
-
 }
 
 async function loadData() {
