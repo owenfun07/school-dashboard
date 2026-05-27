@@ -1,34 +1,642 @@
+
+
+const notesLayer = document.getElementById("notes-layer");
+const notesToggleBtn = document.getElementById("notes-toggle");
+const addNoteBtn = document.getElementById("add-note");
+let notesEnabled = false;
+let notes = JSON.parse(localStorage.getItem("dashboard_notes") || "[]");
+
+function saveNotes() { localStorage.setItem("dashboard_notes", JSON.stringify(notes)); }
+
+function renderNotes() {
+  if (!notesLayer) return;
+  notesLayer.querySelectorAll(".sticky-note").forEach(el => el.remove());
+  notes.forEach(note => {
+    const el = document.createElement("div");
+    el.className = "sticky-note";
+    el.style.left = `${note.x}px`;
+    el.style.top = `${note.y}px`;
+    el.dataset.id = String(note.id);
+    el.innerHTML = `<div class="sticky-head"><span>Note</span><button class="note-close" type="button">×</button></div><textarea class="sticky-text" placeholder="Type here...">${note.text || ""}</textarea>`;
+
+    const ta = el.querySelector('.sticky-text');
+    ta.addEventListener('input', function () {
+      const n = notes.find(n => n.id === note.id);
+      if (n) { n.text = ta.value; saveNotes(); }
+    });
+
+    el.querySelector('.note-close').addEventListener('click', function () {
+      notes = notes.filter(n => n.id !== note.id);
+      saveNotes();
+      renderNotes();
+    });
+
+    let dragging = false; let offsetX = 0; let offsetY = 0;
+    const head = el.querySelector('.sticky-head');
+    head.addEventListener('mousedown', function (e) {
+      dragging = true;
+      offsetX = e.clientX - el.offsetLeft;
+      offsetY = e.clientY - el.offsetTop;
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging || !notesEnabled) return;
+      el.style.left = `${Math.max(0, e.clientX - offsetX)}px`;
+      el.style.top = `${Math.max(0, e.clientY - offsetY)}px`;
+    });
+    document.addEventListener('mouseup', function () {
+      if (!dragging) return;
+      dragging = false;
+      const n = notes.find(n => n.id === note.id);
+      if (n) { n.x = el.offsetLeft; n.y = el.offsetTop; saveNotes(); }
+    });
+
+    notesLayer.appendChild(el);
+  });
+}
+
+function toggleNotes(force) {
+  if (!notesLayer) return;
+  notesEnabled = typeof force === 'boolean' ? force : !notesEnabled;
+  notesLayer.classList.toggle('hidden', !notesEnabled);
+  if (notesToggleBtn) notesToggleBtn.classList.toggle('active', notesEnabled);
+  if (notesEnabled) renderNotes();
+}
+
+function addNote() {
+  const id = Date.now();
+  notes.push({ id, x: 120 + (notes.length % 4) * 30, y: 120 + (notes.length % 4) * 30, text: "" });
+  saveNotes();
+  renderNotes();
+}
+
+function setupNotes() {
+  if (!notesLayer || !notesToggleBtn || !addNoteBtn) return;
+  notesToggleBtn.addEventListener('click', () => toggleNotes());
+  addNoteBtn.addEventListener('click', addNote);
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      toggleNotes();
+    }
+  });
+}
 const params = new URLSearchParams(window.location.search);
-const token = params.get("token");
+const urlToken = params.get("token");
+const savedToken = localStorage.getItem("access_token");
+const token = urlToken || savedToken;
 
-async function loadData() {
-  // CLASSROOM
-  const classroomRes = await fetch(`/api/classroom?token=${token}`);
-  const classroomData = await classroomRes.json();
+if (urlToken) {
+  localStorage.setItem("access_token", urlToken);
+  window.history.replaceState({}, "", "/dashboard");
+}
 
-  const classesList = document.getElementById("classes");
+const classesList = document.getElementById("classes");
+const assignmentsList = document.getElementById("assignments");
+const selectedCourse = document.getElementById("selected-course");
+const assignmentLoader = document.getElementById("assignment-loader");
+const calendarLoader = document.getElementById("calendar-loader");
+const groupsContainer = document.getElementById("event-groups");
+const driveFilesList = document.getElementById("drive-files");
+const driveSearchInput = document.getElementById("drive-search");
+const driveLoader = document.getElementById("drive-loader");
 
-  if (classroomData.courses) {
-    classroomData.courses.forEach(course => {
+let selectedCourseId = null;
+let selectedCourseName = null;
+let assignmentCache = [];
+let activeAssignmentFilter = "all";
+let activeDriveFilter = "recent";
+let driveSearchQuery = "";
+let driveHasSearched = false;
+let driveViewMode = "list";
+
+async function fetchJsonSafe(url) {
+  const response = await fetch(url);
+  const text = await response.text();
+
+  try {
+    const json = JSON.parse(text);
+    if (!response.ok) {
+      throw new Error(json.error || `Request failed: ${response.status}`);
+    }
+    return json;
+  } catch (_err) {
+    if (!response.ok) {
+      throw new Error(text || `Request failed: ${response.status}`);
+    }
+    throw new Error("Invalid JSON response");
+  }
+}
+
+function setupReloginListener() {
+  window.addEventListener("message", function (event) {
+    if (event.origin !== window.location.origin) return;
+    if (!event.data || event.data.type !== "google-auth-success") return;
+    if (!event.data.token) return;
+
+    localStorage.setItem("access_token", event.data.token);
+    window.location.reload();
+  });
+}
+
+function createReloginButton() {
+  const button = document.createElement("button");
+  button.className = "tab-btn relogin-btn";
+  button.textContent = "Re login";
+
+  button.addEventListener("click", function () {
+    const popupWidth = 500;
+    const popupHeight = 650;
+    const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+    const top = window.screenY + (window.outerHeight - popupHeight) / 2;
+
+    const popup = window.open(
+      "/auth/google?popup=1",
+      "google-auth-popup",
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
+    );
+
+    if (!popup) {
+      window.location.href = "/auth/google";
+    }
+  });
+
+  return button;
+}
+
+function showReloginPrompt(container) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "relogin-wrap";
+  wrapper.appendChild(createReloginButton());
+  container.appendChild(wrapper);
+}
+
+function formatDate(dateInput) {
+  if (!dateInput) return "No due date";
+  const date = new Date(dateInput);
+
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function courseWorkDueDate(work) {
+  if (!work.dueDate) return null;
+
+  const year = work.dueDate.year;
+  const month = (work.dueDate.month || 1) - 1;
+  const day = work.dueDate.day || 1;
+  const hour = work.dueTime?.hours || 0;
+  const minute = work.dueTime?.minutes || 0;
+
+  return new Date(year, month, day, hour, minute);
+}
+
+function eventStartDate(event) {
+  return new Date(event.start?.dateTime || event.start?.date || Date.now());
+}
+
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function endOfToday() {
+  const today = startOfToday();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+}
+
+function endOfTomorrow() {
+  const today = startOfToday();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 23, 59, 59, 999);
+}
+
+function endOfWeek() {
+  const today = startOfToday();
+  const day = today.getDay();
+  const daysUntilSunday = 7 - day;
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysUntilSunday, 23, 59, 59, 999);
+}
+
+function endOfMonth() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function setLoader(loaderEl, isVisible) {
+  loaderEl.classList.toggle("hidden", !isVisible);
+}
+
+function isUnturnedIn(assignment) {
+  return assignment.mySubmissionState !== "TURNED_IN" && assignment.mySubmissionState !== "RETURNED";
+}
+
+function getFilteredAssignments(assignments, filter) {
+  const now = new Date();
+
+  if (filter === "unturned") {
+    return assignments.filter(isUnturnedIn);
+  }
+
+  if (filter === "upcoming") {
+    return assignments.filter(assignment => assignment.due && assignment.due >= now);
+  }
+
+  return assignments;
+}
+
+function renderAssignments() {
+  assignmentsList.innerHTML = "";
+
+  const filtered = getFilteredAssignments(assignmentCache, activeAssignmentFilter);
+
+  if (filtered.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No assignments for this tab.";
+    assignmentsList.appendChild(li);
+    return;
+  }
+
+  filtered.forEach(work => {
+    const li = document.createElement("li");
+    const status = work.mySubmissionState || "UNKNOWN";
+
+    li.innerHTML = `<strong>${work.title || "Untitled assignment"}</strong>
+      <br><span>${formatDate(work.due)}</span>
+      <br><span class="assignment-state">Status: ${status.replaceAll("_", " ")}</span>`;
+    assignmentsList.appendChild(li);
+  });
+}
+
+async function loadAssignments(courseId, courseName, forceRefresh = false) {
+  selectedCourseId = courseId;
+  selectedCourseName = courseName;
+
+  selectedCourse.textContent = `Loading assignments for ${courseName}...`;
+  setLoader(assignmentLoader, true);
+
+  if (!forceRefresh) {
+    assignmentCache = [];
+    renderAssignments();
+  }
+
+  try {
+    const data = await fetchJsonSafe(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
+
+    assignmentCache = (data.courseWork || [])
+    .map(work => ({
+      ...work,
+      due: courseWorkDueDate(work)
+    }))
+    .sort((a, b) => {
+      if (!a.due && !b.due) return 0;
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return a.due - b.due;
+    });
+
+    selectedCourse.textContent = `Assignments for ${courseName}`;
+    renderAssignments();
+  } catch (err) {
+    selectedCourse.textContent = `Could not load assignments: ${err.message}`;
+    assignmentCache = [];
+    renderAssignments();
+
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
+      showReloginPrompt(assignmentsList);
+    }
+  } finally {
+    setLoader(assignmentLoader, false);
+  }
+}
+
+function renderEventGroups(events) {
+  groupsContainer.innerHTML = "";
+
+  const todayStart = startOfToday();
+  const todayEnd = endOfToday();
+  const tomorrowEnd = endOfTomorrow();
+  const weekEnd = endOfWeek();
+  const monthEnd = endOfMonth();
+
+  const groups = {
+    Today: events.filter(event => {
+      const start = eventStartDate(event);
+      return start >= todayStart && start <= todayEnd;
+    }),
+    Tomorrow: events.filter(event => {
+      const start = eventStartDate(event);
+      return start > todayEnd && start <= tomorrowEnd;
+    }),
+    "This Week": events.filter(event => {
+      const start = eventStartDate(event);
+      return start > tomorrowEnd && start <= weekEnd;
+    }),
+    "This Month": events.filter(event => {
+      const start = eventStartDate(event);
+      return start > weekEnd && start <= monthEnd;
+    })
+  };
+
+  Object.entries(groups).forEach(([label, groupedEvents]) => {
+    const section = document.createElement("div");
+    section.className = "event-group";
+
+    const heading = document.createElement("h3");
+    heading.textContent = label;
+    section.appendChild(heading);
+
+    const list = document.createElement("ul");
+
+    if (groupedEvents.length === 0) {
       const li = document.createElement("li");
-      li.textContent = course.name;
+      li.textContent = "No events";
+      list.appendChild(li);
+    } else {
+      groupedEvents.forEach(event => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${event.summary || "No title"}</strong><br><span>${formatDate(eventStartDate(event))}</span><br><span class="event-calendar-name">${event.sourceCalendarSummary || "Primary"}</span>`;
+        list.appendChild(li);
+      });
+    }
+
+    section.appendChild(list);
+    groupsContainer.appendChild(section);
+  });
+}
+
+async function loadCalendar(forceRefresh = false) {
+  if (!forceRefresh) {
+    groupsContainer.innerHTML = "";
+  }
+
+  setLoader(calendarLoader, true);
+
+  try {
+    const calendarData = await fetchJsonSafe(`/api/calendar?token=${encodeURIComponent(token)}`);
+    const events = (calendarData.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b));
+    renderEventGroups(events);
+  } catch (err) {
+    groupsContainer.innerHTML = `<div class="event-group"><h3>Error</h3><ul><li>Could not load calendar: ${err.message}</li></ul></div>`;
+
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
+      showReloginPrompt(groupsContainer);
+    }
+  } finally {
+    setLoader(calendarLoader, false);
+  }
+}
+
+function setupAssignmentTabs() {
+  const tabButtons = document.querySelectorAll("[data-assignment-filter]");
+
+  tabButtons.forEach(button => {
+    button.addEventListener("click", function () {
+      activeAssignmentFilter = button.dataset.assignmentFilter;
+
+      tabButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      renderAssignments();
+    });
+  });
+}
+
+async function loadClasses() {
+  classesList.innerHTML = "";
+
+  try {
+    const classroomData = await fetchJsonSafe(`/api/classroom?token=${encodeURIComponent(token)}`);
+
+    if (classroomData.courses && classroomData.courses.length > 0) {
+      classroomData.courses.forEach(course => {
+        const li = document.createElement("li");
+        const button = document.createElement("button");
+        button.className = "class-btn";
+        button.textContent = course.name;
+        button.addEventListener("click", () => loadAssignments(course.id, course.name));
+        li.appendChild(button);
+        classesList.appendChild(li);
+      });
+    } else {
+      const li = document.createElement("li");
+      li.textContent = "No classes found.";
       classesList.appendChild(li);
+    }
+  } catch (err) {
+    const li = document.createElement("li");
+    li.textContent = `Could not load classes: ${err.message}`;
+    classesList.appendChild(li);
+
+    if (
+      err.message.toLowerCase().includes("invalid") ||
+      err.message.toLowerCase().includes("auth") ||
+      err.message.toLowerCase().includes("login")
+    ) {
+      showReloginPrompt(classesList);
+    }
+  }
+}
+
+
+
+async function toggleDriveStar(fileId, nextStarredValue) {
+  await fetchJsonSafe(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
+}
+
+function renderDriveFiles(files) {
+  driveFilesList.innerHTML = "";
+  driveFilesList.classList.toggle("drive-grid", driveViewMode === "grid");
+
+  if (!driveHasSearched && activeDriveFilter === "recent") {
+    const li = document.createElement("li");
+    li.className = "drive-empty";
+    li.textContent = "Search something to get started.";
+    driveFilesList.appendChild(li);
+    return;
+  }
+
+  if (!files.length) {
+    const li = document.createElement("li");
+    li.className = "drive-empty";
+    li.textContent = "No files found.";
+    driveFilesList.appendChild(li);
+    return;
+  }
+
+  files.forEach(file => {
+    const li = document.createElement("li");
+    li.className = "drive-file-item";
+
+    const link = document.createElement("a");
+    link.href = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.className = "drive-file-link";
+
+    if (driveViewMode === "grid") {
+      const preview = document.createElement("div");
+      preview.className = "drive-preview";
+      if (file.thumbnailLink) {
+        const img = document.createElement("img");
+        img.src = file.thumbnailLink;
+        img.alt = file.name || "Drive file preview";
+        preview.appendChild(img);
+      } else {
+        preview.textContent = "No preview";
+      }
+      link.appendChild(preview);
+    }
+
+    const name = document.createElement("span");
+    name.textContent = file.name || "Untitled file";
+    link.appendChild(name);
+
+    const starButton = document.createElement("button");
+    starButton.className = "star-btn";
+    starButton.textContent = file.starred ? "★" : "☆";
+    starButton.title = file.starred ? "Unstar" : "Star";
+    starButton.addEventListener("click", async () => {
+      starButton.disabled = true;
+      await toggleDriveStar(file.id, !file.starred);
+      await loadDriveFiles(true);
+    });
+
+    li.appendChild(link);
+    li.appendChild(starButton);
+    driveFilesList.appendChild(li);
+  });
+}
+
+async function loadDriveFiles(forceRefresh = false) {
+  if (!forceRefresh) {
+    driveFilesList.innerHTML = "";
+  }
+
+  setLoader(driveLoader, true);
+
+  try {
+    const starred = activeDriveFilter === "starred" ? "1" : "0";
+    const recent = activeDriveFilter === "recent" ? "1" : "0";
+    const data = await fetchJsonSafe(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${starred}&recent=${recent}`);
+    renderDriveFiles(data.files || []);
+  } catch (err) {
+    driveFilesList.innerHTML = `<li>Could not load Drive files: ${err.message}</li>`;
+
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
+      showReloginPrompt(driveFilesList);
+    }
+  } finally {
+    setLoader(driveLoader, false);
+  }
+}
+
+function setupDriveControls() {
+  const driveTabButtons = document.querySelectorAll("[data-drive-filter]");
+
+  if (!driveSearchInput || !driveFilesList) {
+    return;
+  }
+
+  driveTabButtons.forEach(button => {
+    button.addEventListener("click", function () {
+      activeDriveFilter = button.dataset.driveFilter;
+      driveTabButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+      loadDriveFiles();
+    });
+  });
+
+
+  const driveViewToggle = document.getElementById("drive-view-toggle");
+  if (driveViewToggle) {
+    driveViewToggle.addEventListener("click", function () {
+      driveViewMode = driveViewMode === "list" ? "grid" : "list";
+      driveViewToggle.textContent = driveViewMode === "grid" ? "☰ List" : "▦ Grid";
+      loadDriveFiles(true);
     });
   }
 
-  // CALENDAR
-  const calendarRes = await fetch(`/api/calendar?token=${token}`);
-  const calendarData = await calendarRes.json();
+  document.getElementById("drive-search-btn").addEventListener("click", function () {
+    driveSearchQuery = driveSearchInput.value.trim();
+    driveHasSearched = true;
+    loadDriveFiles();
+  });
 
-  const eventsList = document.getElementById("events");
+  driveSearchInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      driveSearchQuery = driveSearchInput.value.trim();
+      driveHasSearched = true;
+      loadDriveFiles();
+    }
+  });
+}
 
-  if (calendarData.items) {
-    calendarData.items.forEach(event => {
-      const li = document.createElement("li");
-      li.textContent = event.summary || "No title";
-      eventsList.appendChild(li);
+function setupRefreshButtons() {
+  const assignmentRefresh = document.getElementById("assignment-refresh");
+  const calendarRefresh = document.getElementById("calendar-refresh");
+
+  if (assignmentRefresh) {
+    assignmentRefresh.addEventListener("click", function () {
+    if (selectedCourseId) {
+      loadAssignments(selectedCourseId, selectedCourseName, true);
+    }
+    });
+  }
+
+  if (calendarRefresh) {
+    calendarRefresh.addEventListener("click", function () {
+      loadCalendar(true);
     });
   }
 }
 
+
+function setupSidebar() {
+  const menuToggle = document.getElementById("menu-toggle");
+  const sideMenu = document.getElementById("side-menu");
+  const menuClose = document.getElementById("menu-close");
+  const menuOverlay = document.getElementById("menu-overlay");
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
+    return;
+  }
+
+  function openMenu() {
+    sideMenu.classList.add("open");
+    menuOverlay.classList.add("open");
+  }
+
+  function closeMenu() {
+    sideMenu.classList.remove("open");
+    menuOverlay.classList.remove("open");
+  }
+
+  menuToggle.addEventListener("click", openMenu);
+  menuClose.addEventListener("click", closeMenu);
+  menuOverlay.addEventListener("click", closeMenu);
+
+}
+
+async function loadData() {
+  if (!classesList || !assignmentsList || !groupsContainer) {
+    return;
+  }
+
+  setupAssignmentTabs();
+  setupDriveControls();
+  setupRefreshButtons();
+
+  if (!token) {
+    window.location.href = "/";
+    return;
+  }
+
+  await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
+}
+
+setupReloginListener();
+setupSidebar();
+setupNotes();
 loadData();
