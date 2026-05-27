@@ -8,7 +8,6 @@ if (urlToken) {
   window.history.replaceState({}, "", "/full-schedule");
 }
 
-
 const monthTitle = document.getElementById("month-title");
 const monthGrid = document.getElementById("month-grid");
 const loader = document.getElementById("full-schedule-loader");
@@ -17,6 +16,11 @@ let allEvents = [];
 const eventModal = document.getElementById("event-modal");
 const eventModalContent = document.getElementById("event-modal-content");
 const eventModalTitle = document.getElementById("event-modal-title");
+
+// Keep modal closed on load
+if (eventModal) {
+  eventModal.style.display = "none";
+}
 
 function setupSidebar() {
   const menuToggle = document.getElementById("menu-toggle");
@@ -40,9 +44,7 @@ function setupSidebar() {
   menuToggle.addEventListener("click", openMenu);
   menuClose.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
-
 }
-
 
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
@@ -65,12 +67,12 @@ function openEventModal(event) {
     ["Event Link", event.htmlLink || "N/A"]
   ];
 
-  eventModalContent.innerHTML = details.map(([k,v]) => `<p><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</p>`).join("");
-  eventModal.classList.remove("hidden");
+  eventModalContent.innerHTML = details.map(([k, v]) => `<p><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</p>`).join("");
+  eventModal.style.display = "flex";
 }
 
 function closeEventModal() {
-  if (eventModal) eventModal.classList.add("hidden");
+  if (eventModal) eventModal.style.display = "none";
 }
 
 function eventStartDate(event) {
@@ -143,14 +145,30 @@ function renderMonth() {
 }
 
 async function loadCalendarEvents() {
-  loader.classList.remove("hidden");
+  if (loader) loader.classList.remove("hidden");
 
-  const response = await fetch(`/api/calendar?token=${encodeURIComponent(token)}`);
-  const data = await response.json();
-  allEvents = data.items || [];
+  try {
+    const response = await fetch(`/api/calendar?token=${encodeURIComponent(token)}`);
 
-  loader.classList.add("hidden");
-  renderMonth();
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    allEvents = data.items || [];
+  } catch (err) {
+    console.error("Failed to load calendar events:", err);
+    allEvents = [];
+
+    if (monthGrid) {
+      monthGrid.innerHTML = `<div style="grid-column:1/-1;padding:20px;color:#d92d20;">
+        Could not load calendar events. Please try refreshing or re-logging in.
+      </div>`;
+    }
+  } finally {
+    if (loader) loader.classList.add("hidden");
+    renderMonth();
+  }
 }
 
 function setupMonthControls() {
@@ -179,10 +197,20 @@ if (!token) {
   loadCalendarEvents();
 }
 
+// Close modal when clicking the backdrop
 if (eventModal) {
   eventModal.addEventListener("click", function (e) {
     if (e.target === eventModal) closeEventModal();
   });
 }
+
+// Close modal with the X button
 const eventModalClose = document.getElementById("event-modal-close");
 if (eventModalClose) eventModalClose.addEventListener("click", closeEventModal);
+
+// Close modal with Escape key
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && eventModal && eventModal.style.display !== "none") {
+    closeEventModal();
+  }
+});
