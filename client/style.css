@@ -589,3 +589,89 @@ li {
   height: 100%;
   object-fit: cover;
 }
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notes-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.add-note-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  pointer-events: auto;
+}
+
+.sticky-note {
+  position: fixed;
+  width: 220px;
+  background: #fff8a8;
+  border: 1px solid #eadf6d;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  pointer-events: auto;
+}
+
+.sticky-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: move;
+  font-weight: 700;
+  background: rgba(255,255,255,0.35);
+}
+
+.note-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.sticky-text {
+  width: 100%;
+  min-height: 130px;
+  border: none;
+  background: transparent;
+  padding: 8px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.day-event {
+  cursor: pointer;
+}
+
+.event-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.event-modal-card {
+  background: #fff;
+  width: min(700px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+#event-modal-content p {
+  margin: 10px 0;
+  word-break: break-word;
+}

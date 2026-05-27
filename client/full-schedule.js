@@ -14,6 +14,9 @@ const monthGrid = document.getElementById("month-grid");
 const loader = document.getElementById("full-schedule-loader");
 let currentDate = new Date();
 let allEvents = [];
+const eventModal = document.getElementById("event-modal");
+const eventModalContent = document.getElementById("event-modal-content");
+const eventModalTitle = document.getElementById("event-modal-title");
 
 function setupSidebar() {
   const menuToggle = document.getElementById("menu-toggle");
@@ -38,6 +41,36 @@ function setupSidebar() {
   menuClose.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
 
+}
+
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+}
+
+function openEventModal(event) {
+  if (!eventModal || !eventModalContent || !eventModalTitle) return;
+
+  eventModalTitle.textContent = event.summary || "No title";
+  const details = [
+    ["Start", event.start?.dateTime || event.start?.date || "N/A"],
+    ["End", event.end?.dateTime || event.end?.date || "N/A"],
+    ["Calendar", event.sourceCalendarSummary || "Primary"],
+    ["Location", event.location || "N/A"],
+    ["Description", event.description || "N/A"],
+    ["Status", event.status || "N/A"],
+    ["Creator", event.creator?.email || event.creator?.displayName || "N/A"],
+    ["Organizer", event.organizer?.email || event.organizer?.displayName || "N/A"],
+    ["Meet Link", event.hangoutLink || "N/A"],
+    ["Event Link", event.htmlLink || "N/A"]
+  ];
+
+  eventModalContent.innerHTML = details.map(([k,v]) => `<p><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</p>`).join("");
+  eventModal.classList.remove("hidden");
+}
+
+function closeEventModal() {
+  if (eventModal) eventModal.classList.add("hidden");
 }
 
 function eventStartDate(event) {
@@ -94,6 +127,7 @@ function renderMonth() {
       const eventLine = document.createElement("div");
       eventLine.className = "day-event";
       eventLine.textContent = event.summary || "No title";
+      eventLine.addEventListener("click", function () { openEventModal(event); });
       cell.appendChild(eventLine);
     });
 
@@ -144,3 +178,11 @@ if (!token) {
   setupMonthControls();
   loadCalendarEvents();
 }
+
+if (eventModal) {
+  eventModal.addEventListener("click", function (e) {
+    if (e.target === eventModal) closeEventModal();
+  });
+}
+const eventModalClose = document.getElementById("event-modal-close");
+if (eventModalClose) eventModalClose.addEventListener("click", closeEventModal);

@@ -1,3 +1,85 @@
+
+
+const notesLayer = document.getElementById("notes-layer");
+const notesToggleBtn = document.getElementById("notes-toggle");
+const addNoteBtn = document.getElementById("add-note");
+let notesEnabled = false;
+let notes = JSON.parse(localStorage.getItem("dashboard_notes") || "[]");
+
+function saveNotes() { localStorage.setItem("dashboard_notes", JSON.stringify(notes)); }
+
+function renderNotes() {
+  if (!notesLayer) return;
+  notesLayer.querySelectorAll(".sticky-note").forEach(el => el.remove());
+  notes.forEach(note => {
+    const el = document.createElement("div");
+    el.className = "sticky-note";
+    el.style.left = `${note.x}px`;
+    el.style.top = `${note.y}px`;
+    el.dataset.id = String(note.id);
+    el.innerHTML = `<div class="sticky-head"><span>Note</span><button class="note-close" type="button">×</button></div><textarea class="sticky-text" placeholder="Type here...">${note.text || ""}</textarea>`;
+
+    const ta = el.querySelector('.sticky-text');
+    ta.addEventListener('input', function () {
+      const n = notes.find(n => n.id === note.id);
+      if (n) { n.text = ta.value; saveNotes(); }
+    });
+
+    el.querySelector('.note-close').addEventListener('click', function () {
+      notes = notes.filter(n => n.id !== note.id);
+      saveNotes();
+      renderNotes();
+    });
+
+    let dragging = false; let offsetX = 0; let offsetY = 0;
+    const head = el.querySelector('.sticky-head');
+    head.addEventListener('mousedown', function (e) {
+      dragging = true;
+      offsetX = e.clientX - el.offsetLeft;
+      offsetY = e.clientY - el.offsetTop;
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging || !notesEnabled) return;
+      el.style.left = `${Math.max(0, e.clientX - offsetX)}px`;
+      el.style.top = `${Math.max(0, e.clientY - offsetY)}px`;
+    });
+    document.addEventListener('mouseup', function () {
+      if (!dragging) return;
+      dragging = false;
+      const n = notes.find(n => n.id === note.id);
+      if (n) { n.x = el.offsetLeft; n.y = el.offsetTop; saveNotes(); }
+    });
+
+    notesLayer.appendChild(el);
+  });
+}
+
+function toggleNotes(force) {
+  if (!notesLayer) return;
+  notesEnabled = typeof force === 'boolean' ? force : !notesEnabled;
+  notesLayer.classList.toggle('hidden', !notesEnabled);
+  if (notesToggleBtn) notesToggleBtn.classList.toggle('active', notesEnabled);
+  if (notesEnabled) renderNotes();
+}
+
+function addNote() {
+  const id = Date.now();
+  notes.push({ id, x: 120 + (notes.length % 4) * 30, y: 120 + (notes.length % 4) * 30, text: "" });
+  saveNotes();
+  renderNotes();
+}
+
+function setupNotes() {
+  if (!notesLayer || !notesToggleBtn || !addNoteBtn) return;
+  notesToggleBtn.addEventListener('click', () => toggleNotes());
+  addNoteBtn.addEventListener('click', addNote);
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      toggleNotes();
+    }
+  });
+}
 const params = new URLSearchParams(window.location.search);
 const urlToken = params.get("token");
 const savedToken = localStorage.getItem("access_token");
@@ -509,55 +591,6 @@ function setupRefreshButtons() {
       loadCalendar(true);
     });
   }
-
-  if (calendarRefresh) {
-    calendarRefresh.addEventListener("click", function () {
-      loadCalendar(true);
-    });
-  }
-}
-
-
-function setupSidebar() {
-  const menuToggle = document.getElementById("menu-toggle");
-  const sideMenu = document.getElementById("side-menu");
-  const menuClose = document.getElementById("menu-close");
-  const menuOverlay = document.getElementById("menu-overlay");
-  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
-    return;
-  }
-
-  function openMenu() {
-    sideMenu.classList.add("open");
-    menuOverlay.classList.add("open");
-  }
-
-  function closeMenu() {
-    sideMenu.classList.remove("open");
-    menuOverlay.classList.remove("open");
-  }
-
-  menuToggle.addEventListener("click", openMenu);
-  menuClose.addEventListener("click", closeMenu);
-  menuOverlay.addEventListener("click", closeMenu);
-
-}
-
-async function loadData() {
-  if (!classesList || !assignmentsList || !groupsContainer) {
-    return;
-  }
-
-  setupAssignmentTabs();
-  setupDriveControls();
-  setupRefreshButtons();
-
-  if (!token) {
-    window.location.href = "/";
-    return;
-  }
-
-  await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
 }
 
 
@@ -605,4 +638,5 @@ async function loadData() {
 
 setupReloginListener();
 setupSidebar();
+setupNotes();
 loadData();
