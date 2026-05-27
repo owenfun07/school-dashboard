@@ -603,49 +603,173 @@ li {
   pointer-events: none;
   z-index: 50;
 }
-
-.add-note-btn {
+ 
+/* FAB button to add a new note */
+.add-note-fab {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #344054;
+  color: white;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
   pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: background 0.15s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
+ 
+.add-note-fab:hover {
+  background: #1d2939;
+  transform: scale(1.08);
+}
+ 
+/* Minimized notes tray at the bottom */
+.notes-tray {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  pointer-events: auto;
+  max-width: 80vw;
+}
+ 
+.tray-chip {
+  background: #344054;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  transition: background 0.15s, transform 0.1s;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+ 
+.tray-chip:hover {
+  background: #1d2939;
+  transform: translateY(-2px);
+}
+ 
+/* Sticky note card */
 .sticky-note {
   position: fixed;
-  width: 220px;
+  width: 240px;
   background: #fff8a8;
-  border: 1px solid #eadf6d;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  border: 1px solid #e8d96a;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
   pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s;
 }
-
+ 
+.sticky-note:hover {
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+}
+ 
+/* Minimized: hide the body */
+.sticky-note.minimized .sticky-body {
+  display: none;
+}
+ 
+/* Header bar — also the drag handle */
 .sticky-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 8px 8px 6px;
   cursor: move;
+  border-bottom: 1px solid #e8d96a;
+  border-radius: 12px 12px 0 0;
+  background: rgba(255,255,255,0.3);
+  user-select: none;
+}
+ 
+/* Editable title */
+.sticky-title {
+  flex: 1;
+  font-size: 13px;
   font-weight: 700;
-  background: rgba(255,255,255,0.35);
+  color: #5a4a00;
+  outline: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: text;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.note-close {
-  border: none;
+ 
+.sticky-title:focus {
+  background: rgba(255,255,255,0.6);
+  white-space: normal;
+  overflow: visible;
+}
+ 
+/* Minimize / delete buttons */
+.note-action-btn {
+  flex-shrink: 0;
   background: transparent;
+  border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
+  color: #8a7200;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
 }
-
+ 
+.note-action-btn:hover {
+  background: rgba(0,0,0,0.08);
+  color: #3d3400;
+}
+ 
+.note-delete-btn:hover {
+  background: #fde8e8;
+  color: #d92d20;
+}
+ 
+/* Note body + textarea */
+.sticky-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+ 
 .sticky-text {
   width: 100%;
-  min-height: 130px;
+  min-height: 120px;
   border: none;
   background: transparent;
-  padding: 8px;
+  padding: 8px 10px;
   resize: vertical;
   font-family: inherit;
+  font-size: 13px;
+  color: #3d3400;
+  outline: none;
+  box-sizing: border-box;
+  border-radius: 0 0 12px 12px;
 }
 
 .day-event {
