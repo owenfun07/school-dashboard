@@ -1,12 +1,40 @@
-/* RESET + BASE */
+/* =====================================================================
+   CSS CUSTOM PROPERTIES — overridden per theme by JS
+   ===================================================================== */
+
+:root {
+  --dash-bg: #f5f7fb;
+  --card-bg: #ffffff;
+  --card-border: #e8edf5;
+  --text-primary: #101828;
+  --text-secondary: #475467;
+  --text-muted: #667085;
+  --card-accent-classes: transparent;
+  --card-accent-assignments: transparent;
+  --card-accent-drive: transparent;
+  --card-accent-calendar: transparent;
+}
+
+/* =====================================================================
+   RESET + BASE
+   ===================================================================== */
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f5f7fb;
+  background: var(--dash-bg);
+  color: var(--text-primary);
   min-height: 100vh;
+  transition: background 0.25s, color 0.25s;
 }
 
-/* ================= LOGIN PAGE ================= */
+html, body {
+  overflow-x: hidden;
+}
+
+/* =====================================================================
+   LOGIN PAGE
+   ===================================================================== */
 
 .container {
   text-align: center;
@@ -23,14 +51,12 @@ body {
   margin-top: 10vh;
 }
 
-/* Title */
 .main-title {
   font-size: 26px;
   margin-bottom: 40px;
   color: #333;
 }
 
-/* Google button */
 .google-btn {
   display: inline-flex;
   align-items: center;
@@ -56,7 +82,15 @@ body {
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* Help button */
+.google-btn.is-loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.google-btn.is-loading img {
+  opacity: 0.4;
+}
+
 .help-btn {
   position: absolute;
   top: 20px;
@@ -77,7 +111,6 @@ body {
   background: #eee;
 }
 
-/* Footer */
 .footer {
   position: fixed;
   bottom: 15px;
@@ -97,48 +130,37 @@ body {
   text-decoration: underline;
 }
 
-/* ================= FULL PAGES (PRIVACY / TERMS) ================= */
+/* =====================================================================
+   FULL PAGES (PRIVACY / TERMS / ABOUT)
+   ===================================================================== */
 
 .page {
   max-width: 900px;
   margin: 40px auto;
   padding: 20px;
-  text-align: center; /* centers all text */
+  text-align: center;
 }
 
-/* Headings */
-.page h1 {
-  margin-bottom: 20px;
-}
+.page h1 { margin-bottom: 20px; }
+.page h2 { margin-top: 25px; }
+.page p  { margin-bottom: 15px; }
+.page ul { list-style: none; padding: 0; }
+.page li { margin-bottom: 8px; }
 
-.page h2 {
-  margin-top: 25px;
-}
-
-/* Paragraphs */
-.page p {
-  margin-bottom: 15px;
-}
-
-/* Lists */
-.page ul {
-  list-style: none;
-  padding: 0;
-}
-
-.page li {
-  margin-bottom: 8px;
-}
-
-/* Make sure scrolling works */
-html, body {
-  overflow-x: hidden;
-}
-
-/* ================= DASHBOARD ================= */
+/* =====================================================================
+   DASHBOARD LAYOUT
+   ===================================================================== */
 
 .dashboard {
   padding: 40px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
 .grid {
@@ -148,30 +170,26 @@ html, body {
   margin-top: 20px;
 }
 
+/* =====================================================================
+   CARDS
+   ===================================================================== */
+
 .card {
-  background: white;
+  background: var(--card-bg);
   padding: 20px;
   border-radius: 16px;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.06);
+  border: 1px solid var(--card-border);
+  position: relative;
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.2s;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0,0,0,0.09);
 }
 
-li {
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.google-btn.is-loading {
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.google-btn.is-loading img {
-  opacity: 0.4;
+.card-wide {
+  grid-column: 1 / -1;
 }
 
 .card-header-row {
@@ -181,9 +199,76 @@ li {
   gap: 10px;
 }
 
+/* Drag handle — shown in top-left corner when layout drag is active */
+.card-drag-handle {
+  position: absolute;
+  top: 10px;
+  right: 44px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 16px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.card:hover .card-drag-handle {
+  opacity: 1;
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
+}
+
+.card-dragging {
+  opacity: 0.5;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+}
+
+.card-placeholder {
+  background: transparent;
+  border: 2px dashed #c7d2fe;
+  border-radius: 16px;
+  min-height: 80px;
+}
+
+.card-placeholder.card-wide {
+  grid-column: 1 / -1;
+}
+
+/* =====================================================================
+   LISTS
+   ===================================================================== */
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-primary);
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+/* =====================================================================
+   BUTTONS & CONTROLS
+   ===================================================================== */
+
 .refresh-btn {
   border: 1px solid #d0d5dd;
-  background: white;
+  background: var(--card-bg);
+  color: var(--text-secondary);
   border-radius: 999px;
   min-width: 28px;
   height: 28px;
@@ -191,15 +276,320 @@ li {
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
+  transition: background 0.15s;
 }
 
 .refresh-btn:hover {
   background: #f2f4f7;
 }
 
-.card-wide {
-  grid-column: 1 / -1;
+.tab-btn {
+  border: 1px solid #d0d5dd;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
 }
+
+.tab-btn.active {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.tab-btn:hover:not(.active) {
+  background: #f2f4f7;
+}
+
+/* =====================================================================
+   SETTINGS BUTTON (top right of dashboard header)
+   ===================================================================== */
+
+.settings-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background: #f2f4f7;
+  transform: rotate(30deg);
+}
+
+/* =====================================================================
+   SETTINGS OVERLAY + PANEL
+   ===================================================================== */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.3);
+  z-index: 1300;
+  transition: opacity 0.2s;
+}
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background: var(--card-bg);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  z-index: 1400;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease;
+}
+
+.settings-panel.hidden,
+.settings-overlay.hidden {
+  display: none;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--card-border);
+  flex-shrink: 0;
+}
+
+.settings-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.settings-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.settings-close:hover {
+  background: #f2f4f7;
+  color: var(--text-primary);
+}
+
+.settings-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-view.hidden {
+  display: none;
+}
+
+.settings-section {
+  padding: 4px 12px 12px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 4px;
+}
+
+.settings-section-bottom {
+  margin-top: auto;
+  border-bottom: none;
+  border-top: 1px solid var(--card-border);
+  padding-top: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-row:hover {
+  background: #f5f7fb;
+}
+
+.settings-row-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.settings-row-label {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.settings-row-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.settings-row-danger .settings-row-label {
+  color: #d92d20;
+}
+
+.settings-row-danger:hover {
+  background: #fff1f0;
+}
+
+/* Notes on/off toggle button inside settings */
+.settings-toggle-btn {
+  border: 1px solid #d0d5dd;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 42px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.settings-toggle-btn.active {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+/* Customise sub-view */
+.settings-back {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px 4px;
+  text-align: left;
+  display: block;
+}
+
+.settings-back:hover {
+  text-decoration: underline;
+}
+
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 16px 6px;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 16px;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.settings-action-btn {
+  margin: 0 16px;
+  border: 1px solid #d0d5dd;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-action-btn:hover {
+  background: #f2f4f7;
+}
+
+/* =====================================================================
+   THEME SWATCHES
+   ===================================================================== */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 4px 16px 12px;
+}
+
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.theme-swatch:hover {
+  background: #f5f7fb;
+}
+
+.theme-swatch.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.theme-preview {
+  width: 100%;
+  height: 52px;
+  border-radius: 8px;
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.theme-preview-card {
+  width: 80%;
+  height: 28px;
+  border-radius: 5px;
+  border-left-width: 3px;
+  border-left-style: solid;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.theme-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* =====================================================================
+   CLASSES / ASSIGNMENTS
+   ===================================================================== */
 
 .class-btn {
   width: 100%;
@@ -210,6 +600,7 @@ li {
   padding: 8px 10px;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.15s;
 }
 
 .class-btn:hover {
@@ -218,7 +609,7 @@ li {
 
 .selected-course {
   margin-top: 0;
-  color: #667085;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -229,24 +620,14 @@ li {
   margin-bottom: 10px;
 }
 
-.tab-btn {
-  border: 1px solid #d0d5dd;
-  background: white;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.tab-btn.active {
-  background: #e0e7ff;
-  border-color: #c7d2fe;
-}
-
 .assignment-state {
-  color: #475467;
+  color: var(--text-secondary);
   font-size: 12px;
 }
+
+/* =====================================================================
+   LOADER
+   ===================================================================== */
 
 .loader {
   width: 18px;
@@ -263,13 +644,13 @@ li {
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
+
+/* =====================================================================
+   CALENDAR EVENT GROUPS
+   ===================================================================== */
 
 .event-groups {
   display: grid;
@@ -279,7 +660,7 @@ li {
 
 .event-group {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 12px;
 }
@@ -293,16 +674,16 @@ li {
 .event-group h3 {
   margin-top: 0;
   margin-bottom: 12px;
+  color: var(--text-primary);
 }
 
 .event-calendar-name {
   display: block;
-  color: #667085;
+  color: var(--text-muted);
   font-size: 12px;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-
 
 .see-more-link {
   display: inline-block;
@@ -315,6 +696,10 @@ li {
 .see-more-link:hover {
   text-decoration: underline;
 }
+
+/* =====================================================================
+   SIDEBAR / HAMBURGER MENU
+   ===================================================================== */
 
 .menu-toggle {
   position: fixed;
@@ -387,6 +772,10 @@ li {
   pointer-events: auto;
 }
 
+/* =====================================================================
+   FULL SCHEDULE PAGE
+   ===================================================================== */
+
 .schedule-header {
   display: flex;
   justify-content: space-between;
@@ -438,6 +827,17 @@ li {
   margin-bottom: 8px;
 }
 
+.day-number-today {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ef4444;
+  border-radius: 50%;
+  color: #ef4444;
+}
+
 .day-event {
   font-size: 12px;
   background: #eef4ff;
@@ -448,12 +848,17 @@ li {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .day-more {
   font-size: 12px;
   color: #667085;
 }
+
+/* =====================================================================
+   DRIVE
+   ===================================================================== */
 
 .drive-toolbar {
   display: flex;
@@ -467,18 +872,33 @@ li {
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+#drive-files {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.drive-empty {
+  color: var(--text-muted);
 }
 
 .drive-file-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .drive-file-link {
-  color: #344054;
+  color: #1d4ed8;
   text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -495,66 +915,12 @@ li {
   color: #f59e0b;
   cursor: pointer;
   padding: 0 2px;
+  flex-shrink: 0;
 }
 
 .star-btn:disabled {
   opacity: 0.4;
   cursor: default;
-}
-
-.day-number-today {
-  display: inline-flex;
-  width: 26px;
-  height: 26px;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #ef4444;
-  border-radius: 50%;
-  color: #ef4444;
-}
-
-
-
-
-.relogin-wrap {
-  margin-top: 10px;
-}
-
-.relogin-btn {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-}
-
-.citation-form-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-#drive-files {
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.drive-empty {
-  color: #667085;
-}
-
-.drive-file-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.drive-file-link {
-  color: #1d4ed8;
-  text-decoration: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .drive-grid {
@@ -590,12 +956,50 @@ li {
   object-fit: cover;
 }
 
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+/* =====================================================================
+   RELOGIN
+   ===================================================================== */
+
+.relogin-wrap {
+  margin-top: 10px;
 }
+
+.relogin-btn {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+/* =====================================================================
+   EVENT MODAL (full schedule page)
+   ===================================================================== */
+
+.event-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.event-modal-card {
+  background: #fff;
+  width: min(700px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+#event-modal-content p {
+  margin: 10px 0;
+  word-break: break-word;
+}
+
+/* =====================================================================
+   NOTES LAYER
+   ===================================================================== */
 
 .notes-layer {
   position: fixed;
@@ -603,7 +1007,7 @@ li {
   pointer-events: none;
   z-index: 50;
 }
- 
+
 .add-note-fab {
   position: fixed;
   bottom: 24px;
@@ -624,12 +1028,12 @@ li {
   align-items: center;
   justify-content: center;
 }
- 
+
 .add-note-fab:hover {
   background: #1d2939;
   transform: scale(1.08);
 }
- 
+
 .notes-tray {
   position: fixed;
   bottom: 24px;
@@ -642,7 +1046,7 @@ li {
   pointer-events: auto;
   max-width: 80vw;
 }
- 
+
 .tray-chip {
   background: #344054;
   color: #fff;
@@ -660,12 +1064,12 @@ li {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
- 
+
 .tray-chip:hover {
   background: #1d2939;
   transform: translateY(-2px);
 }
- 
+
 .sticky-note {
   position: fixed;
   width: 240px;
@@ -680,11 +1084,11 @@ li {
   flex-direction: column;
   overflow: hidden;
 }
- 
+
 .sticky-note:hover {
   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
 }
- 
+
 .sticky-head {
   display: flex;
   align-items: center;
@@ -697,7 +1101,7 @@ li {
   user-select: none;
   flex-shrink: 0;
 }
- 
+
 .sticky-title {
   flex: 1;
   font-size: 13px;
@@ -712,13 +1116,13 @@ li {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
- 
+
 .sticky-title:focus {
   background: rgba(255,255,255,0.6);
   white-space: normal;
   overflow: visible;
 }
- 
+
 .note-action-btn {
   flex-shrink: 0;
   background: transparent;
@@ -731,24 +1135,24 @@ li {
   line-height: 1;
   transition: background 0.1s, color 0.1s;
 }
- 
+
 .note-action-btn:hover {
   background: rgba(0,0,0,0.08);
   color: #3d3400;
 }
- 
+
 .note-delete-btn:hover {
   background: #fde8e8;
   color: #d92d20;
 }
- 
+
 .sticky-body {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
 }
- 
+
 .sticky-text {
   flex: 1;
   width: 100%;
@@ -763,8 +1167,7 @@ li {
   outline: none;
   box-sizing: border-box;
 }
- 
-/* Resize handle — bottom-right corner triangle */
+
 .note-resize-handle {
   position: absolute;
   bottom: 0;
@@ -774,38 +1177,21 @@ li {
   cursor: se-resize;
   background: linear-gradient(135deg, transparent 50%, #c8b800 50%);
   border-radius: 0 0 12px 0;
-  opacity: 0.5;
+  opacity: 0.4;
   transition: opacity 0.15s;
 }
- 
+
 .sticky-note:hover .note-resize-handle {
   opacity: 1;
 }
 
-.day-event {
-  cursor: pointer;
-}
+/* =====================================================================
+   CITATION FORM (placeholder-page-1)
+   ===================================================================== */
 
-.event-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+.citation-form-actions {
   display: flex;
+  gap: 10px;
   align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.event-modal-card {
-  background: #fff;
-  width: min(700px, 92vw);
-  max-height: 80vh;
-  overflow-y: auto;
-  border-radius: 14px;
-  padding: 16px;
-}
-
-#event-modal-content p {
-  margin: 10px 0;
-  word-break: break-word;
+  flex-wrap: wrap;
 }
