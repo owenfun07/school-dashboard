@@ -26,7 +26,6 @@ function makeDraggable(el, handleEl, noteId) {
     dragging = true;
     offsetX = e.clientX - el.offsetLeft;
     offsetY = e.clientY - el.offsetTop;
-    el.style.transition = "none";
     el.style.zIndex = 9999;
     e.preventDefault();
   });
@@ -52,11 +51,55 @@ function makeDraggable(el, handleEl, noteId) {
   });
 }
 
+// Custom resize: drag the bottom-right corner to resize both width and height
+function makeResizable(el, noteId) {
+  const handle = document.createElement("div");
+  handle.className = "note-resize-handle";
+  el.appendChild(handle);
+
+  let resizing = false;
+  let startX, startY, startW, startH;
+
+  handle.addEventListener("mousedown", function (e) {
+    resizing = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startW = el.offsetWidth;
+    startH = el.offsetHeight;
+    el.style.zIndex = 9999;
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (!resizing) return;
+    const newW = Math.max(200, startW + (e.clientX - startX));
+    const newH = Math.max(120, startH + (e.clientY - startY));
+    el.style.width = newW + "px";
+    el.style.height = newH + "px";
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!resizing) return;
+    resizing = false;
+    el.style.zIndex = "";
+    const note = getNoteById(noteId);
+    if (note) {
+      note.w = el.offsetWidth;
+      note.h = el.offsetHeight;
+      saveNotes();
+    }
+  });
+}
+
 function createNoteEl(note) {
   const el = document.createElement("div");
-  el.className = "sticky-note" + (note.minimized ? " minimized" : "");
-  el.style.left = note.x + "px";
-  el.style.top = note.y + "px";
+  // Minimized notes are removed from the layer entirely — they only appear in the tray
+  el.className = "sticky-note";
+  el.style.left = (note.x || 120) + "px";
+  el.style.top = (note.y || 120) + "px";
+  if (note.w) el.style.width = note.w + "px";
+  if (note.h) el.style.height = note.h + "px";
   el.dataset.id = String(note.id);
 
   // Header
@@ -86,19 +129,17 @@ function createNoteEl(note) {
     }
   });
 
-  // Minimize button
+  // Minimize button — sends note fully to tray, removes it from screen
   const minimizeBtn = document.createElement("button");
   minimizeBtn.className = "note-action-btn";
-  minimizeBtn.title = note.minimized ? "Restore" : "Minimize";
-  minimizeBtn.innerHTML = note.minimized ? "▲" : "▼";
+  minimizeBtn.title = "Minimize to tray";
+  minimizeBtn.innerHTML = "&#8722;"; // minus sign
   minimizeBtn.addEventListener("click", function () {
     const n = getNoteById(note.id);
     if (!n) return;
-    n.minimized = !n.minimized;
+    n.minimized = true;
     saveNotes();
-    el.classList.toggle("minimized", n.minimized);
-    minimizeBtn.innerHTML = n.minimized ? "▲" : "▼";
-    minimizeBtn.title = n.minimized ? "Restore" : "Minimize";
+    el.remove();
     updateTray();
   });
 
@@ -137,6 +178,7 @@ function createNoteEl(note) {
   el.appendChild(body);
 
   makeDraggable(el, head, note.id);
+  makeResizable(el, note.id);
 
   return el;
 }
@@ -145,7 +187,8 @@ function renderNotes() {
   if (!notesLayer) return;
   notesLayer.querySelectorAll(".sticky-note").forEach(el => el.remove());
 
-  notes.forEach(note => {
+  // Only render notes that are NOT minimized — minimized ones live in the tray only
+  notes.filter(n => !n.minimized).forEach(note => {
     const el = createNoteEl(note);
     notesLayer.appendChild(el);
   });
@@ -197,12 +240,14 @@ function addNote() {
     text: "",
     x: 120 + col * 40,
     y: 120 + col * 40,
+    w: null,
+    h: null,
     minimized: false
   });
   saveNotes();
   renderNotes();
 
-  // Focus the new note's title so user can name it immediately
+  // Focus the title so user can name it immediately
   window.setTimeout(function () {
     const el = notesLayer.querySelector(`.sticky-note[data-id="${id}"] .sticky-title`);
     if (el) {
