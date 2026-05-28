@@ -604,7 +604,6 @@ li {
   z-index: 50;
 }
  
-/* FAB button to add a new note */
 .add-note-fab {
   position: fixed;
   bottom: 24px;
@@ -631,7 +630,6 @@ li {
   transform: scale(1.08);
 }
  
-/* Minimized notes tray at the bottom */
 .notes-tray {
   position: fixed;
   bottom: 24px;
@@ -668,10 +666,11 @@ li {
   transform: translateY(-2px);
 }
  
-/* Sticky note card */
 .sticky-note {
   position: fixed;
   width: 240px;
+  min-width: 200px;
+  min-height: 120px;
   background: #fff8a8;
   border: 1px solid #e8d96a;
   border-radius: 12px;
@@ -679,19 +678,13 @@ li {
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.15s;
+  overflow: hidden;
 }
  
 .sticky-note:hover {
   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
 }
  
-/* Minimized: hide the body */
-.sticky-note.minimized .sticky-body {
-  display: none;
-}
- 
-/* Header bar — also the drag handle */
 .sticky-head {
   display: flex;
   align-items: center;
@@ -702,9 +695,9 @@ li {
   border-radius: 12px 12px 0 0;
   background: rgba(255,255,255,0.3);
   user-select: none;
+  flex-shrink: 0;
 }
  
-/* Editable title */
 .sticky-title {
   flex: 1;
   font-size: 13px;
@@ -726,13 +719,12 @@ li {
   overflow: visible;
 }
  
-/* Minimize / delete buttons */
 .note-action-btn {
   flex-shrink: 0;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   color: #8a7200;
   padding: 2px 5px;
   border-radius: 4px;
@@ -750,26 +742,44 @@ li {
   color: #d92d20;
 }
  
-/* Note body + textarea */
 .sticky-body {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
 }
  
 .sticky-text {
+  flex: 1;
   width: 100%;
-  min-height: 120px;
+  height: 100%;
   border: none;
   background: transparent;
   padding: 8px 10px;
-  resize: vertical;
+  resize: none;
   font-family: inherit;
   font-size: 13px;
   color: #3d3400;
   outline: none;
   box-sizing: border-box;
-  border-radius: 0 0 12px 12px;
+}
+ 
+/* Resize handle — bottom-right corner triangle */
+.note-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, #c8b800 50%);
+  border-radius: 0 0 12px 0;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+ 
+.sticky-note:hover .note-resize-handle {
+  opacity: 1;
 }
 
 .day-event {
