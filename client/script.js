@@ -1,4 +1,343 @@
-// ===================== NOTES SYSTEM =====================
+// =====================================================================
+// SETTINGS & THEME SYSTEM
+// =====================================================================
+
+const THEMES = {
+  default: {
+    label: "Default",
+    preview: ["#f5f7fb", "#ffffff", "#3b82f6"],
+    vars: {}
+  },
+  slate: {
+    label: "Blue Slate",
+    preview: ["#f0f4ff", "#ffffff", "#2563eb"],
+    vars: {
+      "--dash-bg": "#f0f4ff",
+      "--card-bg": "#ffffff",
+      "--card-border": "#c7d7f9",
+      "--card-accent-classes": "#2563eb",
+      "--card-accent-assignments": "#10b981",
+      "--card-accent-drive": "#8b5cf6",
+      "--card-accent-calendar": "#f59e0b",
+      "--accent-left-border": "1",
+    }
+  },
+  warm: {
+    label: "Warm Sand",
+    preview: ["#faf6ef", "#fffdf7", "#b8955a"],
+    vars: {
+      "--dash-bg": "#faf6ef",
+      "--card-bg": "#fffdf7",
+      "--card-border": "#e0d8c4",
+      "--card-accent-classes": "#b8955a",
+      "--card-accent-assignments": "#7a9e60",
+      "--card-accent-drive": "#9e6a7a",
+      "--card-accent-calendar": "#6a7a9e",
+      "--accent-left-border": "1",
+    }
+  },
+  forest: {
+    label: "Forest",
+    preview: ["#f0f7f2", "#ffffff", "#2d6a4f"],
+    vars: {
+      "--dash-bg": "#f0f7f2",
+      "--card-bg": "#ffffff",
+      "--card-border": "#b7dfc8",
+      "--card-accent-classes": "#2d6a4f",
+      "--card-accent-assignments": "#52b788",
+      "--card-accent-drive": "#74c69d",
+      "--card-accent-calendar": "#1b4332",
+      "--accent-left-border": "1",
+    }
+  },
+  midnight: {
+    label: "Midnight",
+    preview: ["#1a1f2e", "#252b3b", "#4a7cf0"],
+    vars: {
+      "--dash-bg": "#1a1f2e",
+      "--card-bg": "#252b3b",
+      "--card-border": "#2e3650",
+      "--text-primary": "#e8ecf4",
+      "--text-secondary": "#8892aa",
+      "--text-muted": "#6b7899",
+      "--card-accent-classes": "#4a7cf0",
+      "--card-accent-assignments": "#3ac97a",
+      "--card-accent-drive": "#c084fc",
+      "--card-accent-calendar": "#f0a040",
+      "--accent-left-border": "1",
+    }
+  }
+};
+
+const DEFAULT_CARD_ORDER = ["classes", "assignments", "drive", "calendar"];
+
+let userPrefs = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}");
+
+function savePrefs() {
+  localStorage.setItem("dashboard_prefs", JSON.stringify(userPrefs));
+}
+
+function applyTheme(themeKey) {
+  const theme = THEMES[themeKey] || THEMES.default;
+  const root = document.documentElement;
+
+  // Clear all theme vars first
+  const allVarKeys = new Set();
+  Object.values(THEMES).forEach(t => Object.keys(t.vars).forEach(k => allVarKeys.add(k)));
+  allVarKeys.forEach(k => root.style.removeProperty(k));
+
+  // Apply selected theme vars
+  Object.entries(theme.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+
+  // Apply accent left borders per card if theme uses them
+  const grid = document.getElementById("dashboard-grid");
+  if (!grid) return;
+  grid.querySelectorAll(".card[data-card]").forEach(card => {
+    const cardKey = card.dataset.card;
+    const accentVar = theme.vars["--card-accent-" + cardKey];
+    if (accentVar && theme.vars["--accent-left-border"]) {
+      card.style.borderLeft = "3px solid " + accentVar;
+      card.style.borderRadius = "0 16px 16px 0";
+    } else {
+      card.style.borderLeft = "";
+      card.style.borderRadius = "";
+    }
+  });
+
+  // Mark active in theme grid
+  document.querySelectorAll(".theme-swatch").forEach(s => {
+    s.classList.toggle("active", s.dataset.theme === themeKey);
+  });
+}
+
+function applyCardOrder(order) {
+  const grid = document.getElementById("dashboard-grid");
+  if (!grid) return;
+  const cards = Array.from(grid.querySelectorAll(".card[data-card]"));
+  const orderMap = {};
+  order.forEach((id, i) => orderMap[id] = i);
+  cards.sort((a, b) => {
+    const ai = orderMap[a.dataset.card] ?? 99;
+    const bi = orderMap[b.dataset.card] ?? 99;
+    return ai - bi;
+  });
+  cards.forEach(c => grid.appendChild(c));
+}
+
+function applyCardSizes(sizes) {
+  if (!sizes) return;
+  Object.entries(sizes).forEach(([cardId, size]) => {
+    const card = document.querySelector(`.card[data-card="${cardId}"]`);
+    if (!card) return;
+    if (size.wide !== undefined) {
+      card.classList.toggle("card-wide", size.wide);
+    }
+  });
+}
+
+function applyAllPrefs() {
+  applyTheme(userPrefs.theme || "default");
+  if (userPrefs.cardOrder) applyCardOrder(userPrefs.cardOrder);
+  if (userPrefs.cardSizes) applyCardSizes(userPrefs.cardSizes);
+}
+
+// =====================================================================
+// SETTINGS PANEL
+// =====================================================================
+
+function setupSettings() {
+  const settingsBtn = document.getElementById("settings-btn");
+  const settingsPanel = document.getElementById("settings-panel");
+  const settingsOverlay = document.getElementById("settings-overlay");
+  const settingsClose = document.getElementById("settings-close");
+  const mainView = document.getElementById("settings-main");
+  const customiseView = document.getElementById("settings-customise");
+  const openCustomise = document.getElementById("open-customise");
+  const customiseBack = document.getElementById("customise-back");
+  const logoutBtn = document.getElementById("logout-btn");
+  const resetLayoutBtn = document.getElementById("reset-layout-btn");
+
+  function openSettings() {
+    settingsPanel.classList.remove("hidden");
+    settingsOverlay.classList.remove("hidden");
+    showMainView();
+  }
+
+  function closeSettings() {
+    settingsPanel.classList.add("hidden");
+    settingsOverlay.classList.add("hidden");
+  }
+
+  function showMainView() {
+    mainView.classList.remove("hidden");
+    customiseView.classList.add("hidden");
+  }
+
+  function showCustomiseView() {
+    mainView.classList.add("hidden");
+    customiseView.classList.remove("hidden");
+    renderThemeGrid();
+  }
+
+  settingsBtn.addEventListener("click", openSettings);
+  settingsClose.addEventListener("click", closeSettings);
+  settingsOverlay.addEventListener("click", closeSettings);
+  openCustomise.addEventListener("click", showCustomiseView);
+  customiseBack.addEventListener("click", showMainView);
+
+  logoutBtn.addEventListener("click", function () {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
+  });
+
+  resetLayoutBtn.addEventListener("click", function () {
+    delete userPrefs.cardOrder;
+    delete userPrefs.cardSizes;
+    savePrefs();
+    applyCardOrder(DEFAULT_CARD_ORDER);
+    // Restore wide classes to default
+    document.querySelector('.card[data-card="drive"]').classList.add("card-wide");
+    document.querySelector('.card[data-card="calendar"]').classList.add("card-wide");
+    document.querySelector('.card[data-card="classes"]').classList.remove("card-wide");
+    document.querySelector('.card[data-card="assignments"]').classList.remove("card-wide");
+    // Re-apply theme accents after DOM reorder
+    applyTheme(userPrefs.theme || "default");
+    resetLayoutBtn.textContent = "Reset ✓";
+    setTimeout(() => resetLayoutBtn.textContent = "Reset layout to default", 1500);
+  });
+
+  // Escape key closes panel
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeSettings();
+  });
+}
+
+// =====================================================================
+// THEME GRID
+// =====================================================================
+
+function renderThemeGrid() {
+  const grid = document.getElementById("theme-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  Object.entries(THEMES).forEach(([key, theme]) => {
+    const swatch = document.createElement("button");
+    swatch.className = "theme-swatch" + ((userPrefs.theme || "default") === key ? " active" : "");
+    swatch.dataset.theme = key;
+    swatch.title = theme.label;
+
+    const preview = document.createElement("div");
+    preview.className = "theme-preview";
+    preview.style.background = theme.preview[0];
+
+    const inner = document.createElement("div");
+    inner.className = "theme-preview-card";
+    inner.style.background = theme.preview[1];
+    inner.style.borderLeft = "3px solid " + theme.preview[2];
+
+    preview.appendChild(inner);
+    swatch.appendChild(preview);
+
+    const label = document.createElement("span");
+    label.className = "theme-label";
+    label.textContent = theme.label;
+    swatch.appendChild(label);
+
+    swatch.addEventListener("click", function () {
+      userPrefs.theme = key;
+      savePrefs();
+      applyTheme(key);
+      document.querySelectorAll(".theme-swatch").forEach(s => s.classList.remove("active"));
+      swatch.classList.add("active");
+    });
+
+    grid.appendChild(swatch);
+  });
+}
+
+// =====================================================================
+// LAYOUT DRAG-TO-REORDER
+// =====================================================================
+
+function setupLayoutDrag() {
+  const grid = document.getElementById("dashboard-grid");
+  if (!grid) return;
+
+  let dragging = null;
+  let placeholder = null;
+
+  grid.querySelectorAll(".card[data-card]").forEach(card => {
+    const handle = document.createElement("div");
+    handle.className = "card-drag-handle";
+    handle.title = "Drag to reorder";
+    handle.innerHTML = "⠿";
+    card.prepend(handle);
+
+    handle.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      dragging = card;
+      card.classList.add("card-dragging");
+
+      placeholder = document.createElement("div");
+      placeholder.className = "card-placeholder";
+      // Match wide class
+      if (card.classList.contains("card-wide")) placeholder.classList.add("card-wide");
+      grid.insertBefore(placeholder, card.nextSibling);
+    });
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+
+    const cards = Array.from(grid.querySelectorAll(".card[data-card]:not(.card-dragging), .card-placeholder"));
+    let closest = null;
+    let closestDist = Infinity;
+
+    cards.forEach(c => {
+      const rect = c.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const midX = rect.left + rect.width / 2;
+      const dist = Math.hypot(e.clientX - midX, e.clientY - midY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = c;
+      }
+    });
+
+    if (closest && closest !== placeholder) {
+      const rect = closest.getBoundingClientRect();
+      const after = e.clientY > rect.top + rect.height / 2;
+      if (after) {
+        grid.insertBefore(placeholder, closest.nextSibling);
+      } else {
+        grid.insertBefore(placeholder, closest);
+      }
+    }
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!dragging) return;
+    grid.insertBefore(dragging, placeholder);
+    placeholder.remove();
+    dragging.classList.remove("card-dragging");
+
+    // Save new order
+    const order = Array.from(grid.querySelectorAll(".card[data-card]")).map(c => c.dataset.card);
+    userPrefs.cardOrder = order;
+    savePrefs();
+
+    // Re-apply theme accents after reorder
+    applyTheme(userPrefs.theme || "default");
+
+    dragging = null;
+    placeholder = null;
+  });
+}
+
+// =====================================================================
+// NOTES SYSTEM
+// =====================================================================
 
 const notesLayer = document.getElementById("notes-layer");
 const notesToggleBtn = document.getElementById("notes-toggle");
@@ -51,7 +390,6 @@ function makeDraggable(el, handleEl, noteId) {
   });
 }
 
-// Custom resize: drag the bottom-right corner to resize both width and height
 function makeResizable(el, noteId) {
   const handle = document.createElement("div");
   handle.className = "note-resize-handle";
@@ -94,7 +432,6 @@ function makeResizable(el, noteId) {
 
 function createNoteEl(note) {
   const el = document.createElement("div");
-  // Minimized notes are removed from the layer entirely — they only appear in the tray
   el.className = "sticky-note";
   el.style.left = (note.x || 120) + "px";
   el.style.top = (note.y || 120) + "px";
@@ -102,11 +439,9 @@ function createNoteEl(note) {
   if (note.h) el.style.height = note.h + "px";
   el.dataset.id = String(note.id);
 
-  // Header
   const head = document.createElement("div");
   head.className = "sticky-head";
 
-  // Editable title
   const title = document.createElement("span");
   title.className = "sticky-title";
   title.textContent = note.name || "Note";
@@ -129,11 +464,10 @@ function createNoteEl(note) {
     }
   });
 
-  // Minimize button — sends note fully to tray, removes it from screen
   const minimizeBtn = document.createElement("button");
   minimizeBtn.className = "note-action-btn";
   minimizeBtn.title = "Minimize to tray";
-  minimizeBtn.innerHTML = "&#8722;"; // minus sign
+  minimizeBtn.innerHTML = "&#8722;";
   minimizeBtn.addEventListener("click", function () {
     const n = getNoteById(note.id);
     if (!n) return;
@@ -143,7 +477,6 @@ function createNoteEl(note) {
     updateTray();
   });
 
-  // Delete button
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "note-action-btn note-delete-btn";
   deleteBtn.title = "Delete note";
@@ -159,7 +492,6 @@ function createNoteEl(note) {
   head.appendChild(minimizeBtn);
   head.appendChild(deleteBtn);
 
-  // Body
   const body = document.createElement("div");
   body.className = "sticky-body";
 
@@ -186,29 +518,18 @@ function createNoteEl(note) {
 function renderNotes() {
   if (!notesLayer) return;
   notesLayer.querySelectorAll(".sticky-note").forEach(el => el.remove());
-
-  // Only render notes that are NOT minimized — minimized ones live in the tray only
   notes.filter(n => !n.minimized).forEach(note => {
-    const el = createNoteEl(note);
-    notesLayer.appendChild(el);
+    notesLayer.appendChild(createNoteEl(note));
   });
-
   updateTray();
 }
 
 function updateTray() {
   if (!notesTray) return;
   notesTray.innerHTML = "";
-
   const minimized = notes.filter(n => n.minimized);
-
-  if (minimized.length === 0) {
-    notesTray.style.display = "none";
-    return;
-  }
-
+  if (minimized.length === 0) { notesTray.style.display = "none"; return; }
   notesTray.style.display = "flex";
-
   minimized.forEach(note => {
     const chip = document.createElement("button");
     chip.className = "tray-chip";
@@ -227,27 +548,20 @@ function toggleNotes(force) {
   if (!notesLayer) return;
   notesVisible = typeof force === "boolean" ? force : !notesVisible;
   notesLayer.classList.toggle("hidden", !notesVisible);
-  if (notesToggleBtn) notesToggleBtn.classList.toggle("active", notesVisible);
+  if (notesToggleBtn) {
+    notesToggleBtn.textContent = notesVisible ? "On" : "Off";
+    notesToggleBtn.setAttribute("aria-pressed", String(notesVisible));
+    notesToggleBtn.classList.toggle("active", notesVisible);
+  }
   if (notesVisible) renderNotes();
 }
 
 function addNote() {
   const id = Date.now();
   const col = notes.length % 4;
-  notes.push({
-    id,
-    name: "Note",
-    text: "",
-    x: 120 + col * 40,
-    y: 120 + col * 40,
-    w: null,
-    h: null,
-    minimized: false
-  });
+  notes.push({ id, name: "Note", text: "", x: 120 + col * 40, y: 120 + col * 40, w: null, h: null, minimized: false });
   saveNotes();
   renderNotes();
-
-  // Focus the title so user can name it immediately
   window.setTimeout(function () {
     const el = notesLayer.querySelector(`.sticky-note[data-id="${id}"] .sticky-title`);
     if (el) {
@@ -262,9 +576,11 @@ function addNote() {
 }
 
 function setupNotes() {
-  if (!notesLayer || !notesToggleBtn || !addNoteBtn) return;
-  notesToggleBtn.addEventListener("click", () => toggleNotes());
+  if (!notesLayer || !addNoteBtn) return;
   addNoteBtn.addEventListener("click", addNote);
+  if (notesToggleBtn) {
+    notesToggleBtn.addEventListener("click", () => toggleNotes());
+  }
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n") {
       e.preventDefault();
@@ -273,8 +589,9 @@ function setupNotes() {
   });
 }
 
-// ===================== END NOTES SYSTEM =====================
-
+// =====================================================================
+// REST OF DASHBOARD (unchanged)
+// =====================================================================
 
 const params = new URLSearchParams(window.location.search);
 const urlToken = params.get("token");
@@ -308,17 +625,12 @@ let driveViewMode = "list";
 async function fetchJsonSafe(url) {
   const response = await fetch(url);
   const text = await response.text();
-
   try {
     const json = JSON.parse(text);
-    if (!response.ok) {
-      throw new Error(json.error || `Request failed: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(json.error || `Request failed: ${response.status}`);
     return json;
   } catch (_err) {
-    if (!response.ok) {
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(text || `Request failed: ${response.status}`);
     throw new Error("Invalid JSON response");
   }
 }
@@ -328,7 +640,6 @@ function setupReloginListener() {
     if (event.origin !== window.location.origin) return;
     if (!event.data || event.data.type !== "google-auth-success") return;
     if (!event.data.token) return;
-
     localStorage.setItem("access_token", event.data.token);
     window.location.reload();
   });
@@ -338,24 +649,13 @@ function createReloginButton() {
   const button = document.createElement("button");
   button.className = "tab-btn relogin-btn";
   button.textContent = "Re login";
-
   button.addEventListener("click", function () {
-    const popupWidth = 500;
-    const popupHeight = 650;
+    const popupWidth = 500, popupHeight = 650;
     const left = window.screenX + (window.outerWidth - popupWidth) / 2;
     const top = window.screenY + (window.outerHeight - popupHeight) / 2;
-
-    const popup = window.open(
-      "/auth/google?popup=1",
-      "google-auth-popup",
-      `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
-    );
-
-    if (!popup) {
-      window.location.href = "/auth/google";
-    }
+    const popup = window.open("/auth/google?popup=1", "google-auth-popup", `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`);
+    if (!popup) window.location.href = "/auth/google";
   });
-
   return button;
 }
 
@@ -368,100 +668,47 @@ function showReloginPrompt(container) {
 
 function formatDate(dateInput) {
   if (!dateInput) return "No due date";
-  const date = new Date(dateInput);
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return new Date(dateInput).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function courseWorkDueDate(work) {
   if (!work.dueDate) return null;
-
-  const year = work.dueDate.year;
-  const month = (work.dueDate.month || 1) - 1;
-  const day = work.dueDate.day || 1;
-  const hour = work.dueTime?.hours || 0;
-  const minute = work.dueTime?.minutes || 0;
-
-  return new Date(year, month, day, hour, minute);
+  const { year, month, day } = work.dueDate;
+  return new Date(year, (month || 1) - 1, day || 1, work.dueTime?.hours || 0, work.dueTime?.minutes || 0);
 }
 
 function eventStartDate(event) {
   return new Date(event.start?.dateTime || event.start?.date || Date.now());
 }
 
-function startOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function endOfToday() {
-  const today = startOfToday();
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-}
-
-function endOfTomorrow() {
-  const today = startOfToday();
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 23, 59, 59, 999);
-}
-
-function endOfWeek() {
-  const today = startOfToday();
-  const day = today.getDay();
-  const daysUntilSunday = 7 - day;
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysUntilSunday, 23, 59, 59, 999);
-}
-
-function endOfMonth() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-}
-
-function setLoader(loaderEl, isVisible) {
-  loaderEl.classList.toggle("hidden", !isVisible);
-}
-
-function isUnturnedIn(assignment) {
-  return assignment.mySubmissionState !== "TURNED_IN" && assignment.mySubmissionState !== "RETURNED";
-}
+function startOfToday() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+function endOfToday() { const t = startOfToday(); return new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999); }
+function endOfTomorrow() { const t = startOfToday(); return new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1, 23, 59, 59, 999); }
+function endOfWeek() { const t = startOfToday(); return new Date(t.getFullYear(), t.getMonth(), t.getDate() + (7 - t.getDay()), 23, 59, 59, 999); }
+function endOfMonth() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() + 1, 0, 23, 59, 59, 999); }
+function setLoader(loaderEl, isVisible) { loaderEl.classList.toggle("hidden", !isVisible); }
+function isUnturnedIn(a) { return a.mySubmissionState !== "TURNED_IN" && a.mySubmissionState !== "RETURNED"; }
 
 function getFilteredAssignments(assignments, filter) {
   const now = new Date();
-
-  if (filter === "unturned") {
-    return assignments.filter(isUnturnedIn);
-  }
-
-  if (filter === "upcoming") {
-    return assignments.filter(assignment => assignment.due && assignment.due >= now);
-  }
-
+  if (filter === "unturned") return assignments.filter(isUnturnedIn);
+  if (filter === "upcoming") return assignments.filter(a => a.due && a.due >= now);
   return assignments;
 }
 
 function renderAssignments() {
   assignmentsList.innerHTML = "";
-
   const filtered = getFilteredAssignments(assignmentCache, activeAssignmentFilter);
-
-  if (filtered.length === 0) {
+  if (!filtered.length) {
     const li = document.createElement("li");
     li.textContent = "No assignments for this tab.";
     assignmentsList.appendChild(li);
     return;
   }
-
   filtered.forEach(work => {
     const li = document.createElement("li");
     const status = work.mySubmissionState || "UNKNOWN";
-
-    li.innerHTML = `<strong>${work.title || "Untitled assignment"}</strong>
-      <br><span>${formatDate(work.due)}</span>
-      <br><span class="assignment-state">Status: ${status.replaceAll("_", " ")}</span>`;
+    li.innerHTML = `<strong>${work.title || "Untitled assignment"}</strong><br><span>${formatDate(work.due)}</span><br><span class="assignment-state">Status: ${status.replaceAll("_", " ")}</span>`;
     assignmentsList.appendChild(li);
   });
 }
@@ -469,40 +716,24 @@ function renderAssignments() {
 async function loadAssignments(courseId, courseName, forceRefresh = false) {
   selectedCourseId = courseId;
   selectedCourseName = courseName;
-
   selectedCourse.textContent = `Loading assignments for ${courseName}...`;
   setLoader(assignmentLoader, true);
-
-  if (!forceRefresh) {
-    assignmentCache = [];
-    renderAssignments();
-  }
-
+  if (!forceRefresh) { assignmentCache = []; renderAssignments(); }
   try {
     const data = await fetchJsonSafe(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(courseId)}`);
-
-    assignmentCache = (data.courseWork || [])
-      .map(work => ({
-        ...work,
-        due: courseWorkDueDate(work)
-      }))
-      .sort((a, b) => {
-        if (!a.due && !b.due) return 0;
-        if (!a.due) return 1;
-        if (!b.due) return -1;
-        return a.due - b.due;
-      });
-
+    assignmentCache = (data.courseWork || []).map(work => ({ ...work, due: courseWorkDueDate(work) })).sort((a, b) => {
+      if (!a.due && !b.due) return 0;
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return a.due - b.due;
+    });
     selectedCourse.textContent = `Assignments for ${courseName}`;
     renderAssignments();
   } catch (err) {
     selectedCourse.textContent = `Could not load assignments: ${err.message}`;
     assignmentCache = [];
     renderAssignments();
-
-    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
-      showReloginPrompt(assignmentsList);
-    }
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth")) showReloginPrompt(assignmentsList);
   } finally {
     setLoader(assignmentLoader, false);
   }
@@ -510,46 +741,22 @@ async function loadAssignments(courseId, courseName, forceRefresh = false) {
 
 function renderEventGroups(events) {
   groupsContainer.innerHTML = "";
-
-  const todayStart = startOfToday();
-  const todayEnd = endOfToday();
-  const tomorrowEnd = endOfTomorrow();
-  const weekEnd = endOfWeek();
-  const monthEnd = endOfMonth();
-
+  const todayStart = startOfToday(), todayEnd = endOfToday(), tomorrowEnd = endOfTomorrow(), weekEnd = endOfWeek(), monthEnd = endOfMonth();
   const groups = {
-    Today: events.filter(event => {
-      const start = eventStartDate(event);
-      return start >= todayStart && start <= todayEnd;
-    }),
-    Tomorrow: events.filter(event => {
-      const start = eventStartDate(event);
-      return start > todayEnd && start <= tomorrowEnd;
-    }),
-    "This Week": events.filter(event => {
-      const start = eventStartDate(event);
-      return start > tomorrowEnd && start <= weekEnd;
-    }),
-    "This Month": events.filter(event => {
-      const start = eventStartDate(event);
-      return start > weekEnd && start <= monthEnd;
-    })
+    Today: events.filter(e => { const s = eventStartDate(e); return s >= todayStart && s <= todayEnd; }),
+    Tomorrow: events.filter(e => { const s = eventStartDate(e); return s > todayEnd && s <= tomorrowEnd; }),
+    "This Week": events.filter(e => { const s = eventStartDate(e); return s > tomorrowEnd && s <= weekEnd; }),
+    "This Month": events.filter(e => { const s = eventStartDate(e); return s > weekEnd && s <= monthEnd; })
   };
-
   Object.entries(groups).forEach(([label, groupedEvents]) => {
     const section = document.createElement("div");
     section.className = "event-group";
-
     const heading = document.createElement("h3");
     heading.textContent = label;
     section.appendChild(heading);
-
     const list = document.createElement("ul");
-
-    if (groupedEvents.length === 0) {
-      const li = document.createElement("li");
-      li.textContent = "No events";
-      list.appendChild(li);
+    if (!groupedEvents.length) {
+      const li = document.createElement("li"); li.textContent = "No events"; list.appendChild(li);
     } else {
       groupedEvents.forEach(event => {
         const li = document.createElement("li");
@@ -557,44 +764,31 @@ function renderEventGroups(events) {
         list.appendChild(li);
       });
     }
-
     section.appendChild(list);
     groupsContainer.appendChild(section);
   });
 }
 
 async function loadCalendar(forceRefresh = false) {
-  if (!forceRefresh) {
-    groupsContainer.innerHTML = "";
-  }
-
+  if (!forceRefresh) groupsContainer.innerHTML = "";
   setLoader(calendarLoader, true);
-
   try {
-    const calendarData = await fetchJsonSafe(`/api/calendar?token=${encodeURIComponent(token)}`);
-    const events = (calendarData.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b));
-    renderEventGroups(events);
+    const data = await fetchJsonSafe(`/api/calendar?token=${encodeURIComponent(token)}`);
+    renderEventGroups((data.items || []).sort((a, b) => eventStartDate(a) - eventStartDate(b)));
   } catch (err) {
     groupsContainer.innerHTML = `<div class="event-group"><h3>Error</h3><ul><li>Could not load calendar: ${err.message}</li></ul></div>`;
-
-    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
-      showReloginPrompt(groupsContainer);
-    }
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth")) showReloginPrompt(groupsContainer);
   } finally {
     setLoader(calendarLoader, false);
   }
 }
 
 function setupAssignmentTabs() {
-  const tabButtons = document.querySelectorAll("[data-assignment-filter]");
-
-  tabButtons.forEach(button => {
+  document.querySelectorAll("[data-assignment-filter]").forEach(button => {
     button.addEventListener("click", function () {
       activeAssignmentFilter = button.dataset.assignmentFilter;
-
-      tabButtons.forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll("[data-assignment-filter]").forEach(b => b.classList.remove("active"));
       button.classList.add("active");
-
       renderAssignments();
     });
   });
@@ -602,12 +796,10 @@ function setupAssignmentTabs() {
 
 async function loadClasses() {
   classesList.innerHTML = "";
-
   try {
-    const classroomData = await fetchJsonSafe(`/api/classroom?token=${encodeURIComponent(token)}`);
-
-    if (classroomData.courses && classroomData.courses.length > 0) {
-      classroomData.courses.forEach(course => {
+    const data = await fetchJsonSafe(`/api/classroom?token=${encodeURIComponent(token)}`);
+    if (data.courses && data.courses.length > 0) {
+      data.courses.forEach(course => {
         const li = document.createElement("li");
         const button = document.createElement("button");
         button.className = "class-btn";
@@ -617,100 +809,50 @@ async function loadClasses() {
         classesList.appendChild(li);
       });
     } else {
-      const li = document.createElement("li");
-      li.textContent = "No classes found.";
-      classesList.appendChild(li);
+      const li = document.createElement("li"); li.textContent = "No classes found."; classesList.appendChild(li);
     }
   } catch (err) {
-    const li = document.createElement("li");
-    li.textContent = `Could not load classes: ${err.message}`;
-    classesList.appendChild(li);
-
-    if (
-      err.message.toLowerCase().includes("invalid") ||
-      err.message.toLowerCase().includes("auth") ||
-      err.message.toLowerCase().includes("login")
-    ) {
-      showReloginPrompt(classesList);
-    }
+    const li = document.createElement("li"); li.textContent = `Could not load classes: ${err.message}`; classesList.appendChild(li);
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth")) showReloginPrompt(classesList);
   }
 }
 
-async function toggleDriveStar(fileId, nextStarredValue) {
-  await fetchJsonSafe(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${nextStarredValue ? "1" : "0"}`);
+async function toggleDriveStar(fileId, starred) {
+  await fetchJsonSafe(`/api/drive/star?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}&starred=${starred ? "1" : "0"}`);
 }
 
 function renderDriveFiles(files) {
   driveFilesList.innerHTML = "";
   driveFilesList.classList.toggle("drive-grid", driveViewMode === "grid");
-
   if (!driveHasSearched && activeDriveFilter === "recent") {
-    const li = document.createElement("li");
-    li.className = "drive-empty";
-    li.textContent = "Search something to get started.";
-    driveFilesList.appendChild(li);
-    return;
+    const li = document.createElement("li"); li.className = "drive-empty"; li.textContent = "Search something to get started."; driveFilesList.appendChild(li); return;
   }
-
   if (!files.length) {
-    const li = document.createElement("li");
-    li.className = "drive-empty";
-    li.textContent = "No files found.";
-    driveFilesList.appendChild(li);
-    return;
+    const li = document.createElement("li"); li.className = "drive-empty"; li.textContent = "No files found."; driveFilesList.appendChild(li); return;
   }
-
   files.forEach(file => {
     const li = document.createElement("li");
     li.className = "drive-file-item";
-
     const link = document.createElement("a");
     link.href = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.className = "drive-file-link";
-
+    link.target = "_blank"; link.rel = "noopener noreferrer"; link.className = "drive-file-link";
     if (driveViewMode === "grid") {
-      const preview = document.createElement("div");
-      preview.className = "drive-preview";
-      if (file.thumbnailLink) {
-        const img = document.createElement("img");
-        img.src = file.thumbnailLink;
-        img.alt = file.name || "Drive file preview";
-        preview.appendChild(img);
-      } else {
-        preview.textContent = "No preview";
-      }
+      const preview = document.createElement("div"); preview.className = "drive-preview";
+      if (file.thumbnailLink) { const img = document.createElement("img"); img.src = file.thumbnailLink; img.alt = file.name || ""; preview.appendChild(img); }
+      else preview.textContent = "No preview";
       link.appendChild(preview);
     }
-
-    const name = document.createElement("span");
-    name.textContent = file.name || "Untitled file";
-    link.appendChild(name);
-
+    const name = document.createElement("span"); name.textContent = file.name || "Untitled file"; link.appendChild(name);
     const starButton = document.createElement("button");
-    starButton.className = "star-btn";
-    starButton.textContent = file.starred ? "★" : "☆";
-    starButton.title = file.starred ? "Unstar" : "Star";
-    starButton.addEventListener("click", async () => {
-      starButton.disabled = true;
-      await toggleDriveStar(file.id, !file.starred);
-      await loadDriveFiles(true);
-    });
-
-    li.appendChild(link);
-    li.appendChild(starButton);
-    driveFilesList.appendChild(li);
+    starButton.className = "star-btn"; starButton.textContent = file.starred ? "★" : "☆"; starButton.title = file.starred ? "Unstar" : "Star";
+    starButton.addEventListener("click", async () => { starButton.disabled = true; await toggleDriveStar(file.id, !file.starred); await loadDriveFiles(true); });
+    li.appendChild(link); li.appendChild(starButton); driveFilesList.appendChild(li);
   });
 }
 
 async function loadDriveFiles(forceRefresh = false) {
-  if (!forceRefresh) {
-    driveFilesList.innerHTML = "";
-  }
-
+  if (!forceRefresh) driveFilesList.innerHTML = "";
   setLoader(driveLoader, true);
-
   try {
     const starred = activeDriveFilter === "starred" ? "1" : "0";
     const recent = activeDriveFilter === "recent" ? "1" : "0";
@@ -718,31 +860,22 @@ async function loadDriveFiles(forceRefresh = false) {
     renderDriveFiles(data.files || []);
   } catch (err) {
     driveFilesList.innerHTML = `<li>Could not load Drive files: ${err.message}</li>`;
-
-    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth") || err.message.toLowerCase().includes("login")) {
-      showReloginPrompt(driveFilesList);
-    }
+    if (err.message.toLowerCase().includes("invalid") || err.message.toLowerCase().includes("auth")) showReloginPrompt(driveFilesList);
   } finally {
     setLoader(driveLoader, false);
   }
 }
 
 function setupDriveControls() {
-  const driveTabButtons = document.querySelectorAll("[data-drive-filter]");
-
-  if (!driveSearchInput || !driveFilesList) {
-    return;
-  }
-
-  driveTabButtons.forEach(button => {
+  if (!driveSearchInput || !driveFilesList) return;
+  document.querySelectorAll("[data-drive-filter]").forEach(button => {
     button.addEventListener("click", function () {
       activeDriveFilter = button.dataset.driveFilter;
-      driveTabButtons.forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll("[data-drive-filter]").forEach(b => b.classList.remove("active"));
       button.classList.add("active");
       loadDriveFiles();
     });
   });
-
   const driveViewToggle = document.getElementById("drive-view-toggle");
   if (driveViewToggle) {
     driveViewToggle.addEventListener("click", function () {
@@ -751,39 +884,19 @@ function setupDriveControls() {
       loadDriveFiles(true);
     });
   }
-
   document.getElementById("drive-search-btn").addEventListener("click", function () {
-    driveSearchQuery = driveSearchInput.value.trim();
-    driveHasSearched = true;
-    loadDriveFiles();
+    driveSearchQuery = driveSearchInput.value.trim(); driveHasSearched = true; loadDriveFiles();
   });
-
-  driveSearchInput.addEventListener("keydown", function (event) {
-    if (event.key === "Enter") {
-      driveSearchQuery = driveSearchInput.value.trim();
-      driveHasSearched = true;
-      loadDriveFiles();
-    }
+  driveSearchInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { driveSearchQuery = driveSearchInput.value.trim(); driveHasSearched = true; loadDriveFiles(); }
   });
 }
 
 function setupRefreshButtons() {
-  const assignmentRefresh = document.getElementById("assignment-refresh");
-  const calendarRefresh = document.getElementById("calendar-refresh");
-
-  if (assignmentRefresh) {
-    assignmentRefresh.addEventListener("click", function () {
-      if (selectedCourseId) {
-        loadAssignments(selectedCourseId, selectedCourseName, true);
-      }
-    });
-  }
-
-  if (calendarRefresh) {
-    calendarRefresh.addEventListener("click", function () {
-      loadCalendar(true);
-    });
-  }
+  const ar = document.getElementById("assignment-refresh");
+  const cr = document.getElementById("calendar-refresh");
+  if (ar) ar.addEventListener("click", () => { if (selectedCourseId) loadAssignments(selectedCourseId, selectedCourseName, true); });
+  if (cr) cr.addEventListener("click", () => loadCalendar(true));
 }
 
 function setupSidebar() {
@@ -791,43 +904,31 @@ function setupSidebar() {
   const sideMenu = document.getElementById("side-menu");
   const menuClose = document.getElementById("menu-close");
   const menuOverlay = document.getElementById("menu-overlay");
-  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) {
-    return;
-  }
-
-  function openMenu() {
-    sideMenu.classList.add("open");
-    menuOverlay.classList.add("open");
-  }
-
-  function closeMenu() {
-    sideMenu.classList.remove("open");
-    menuOverlay.classList.remove("open");
-  }
-
-  menuToggle.addEventListener("click", openMenu);
-  menuClose.addEventListener("click", closeMenu);
-  menuOverlay.addEventListener("click", closeMenu);
+  if (!menuToggle || !sideMenu || !menuClose || !menuOverlay) return;
+  const open = () => { sideMenu.classList.add("open"); menuOverlay.classList.add("open"); };
+  const close = () => { sideMenu.classList.remove("open"); menuOverlay.classList.remove("open"); };
+  menuToggle.addEventListener("click", open);
+  menuClose.addEventListener("click", close);
+  menuOverlay.addEventListener("click", close);
 }
 
 async function loadData() {
-  if (!classesList || !assignmentsList || !groupsContainer) {
-    return;
-  }
-
+  if (!classesList || !assignmentsList || !groupsContainer) return;
   setupAssignmentTabs();
   setupDriveControls();
   setupRefreshButtons();
-
-  if (!token) {
-    window.location.href = "/";
-    return;
-  }
-
+  if (!token) { window.location.href = "/"; return; }
   await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
 }
 
+// =====================================================================
+// BOOT
+// =====================================================================
+
 setupReloginListener();
 setupSidebar();
+setupSettings();
 setupNotes();
+setupLayoutDrag();
+applyAllPrefs();
 loadData();
