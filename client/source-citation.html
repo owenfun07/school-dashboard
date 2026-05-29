@@ -3,10 +3,10 @@
 <head>
   <title>Source Citation Tool</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
   <button id="menu-toggle" class="menu-toggle" aria-label="Open menu">☰</button>
 
   <aside id="side-menu" class="side-menu">
@@ -14,9 +14,8 @@
     <h3>Menu</h3>
     <a href="/dashboard">Dashboard</a>
     <a href="/full-schedule">Full Schedule</a>
-
-    <button id="tools-toggle" class="tools-toggle" aria-expanded="true">Tools ▴</button>
-    <div id="tools-dropdown" class="tools-dropdown">
+    <button id="tools-toggle" class="tab-btn" style="margin:4px 0;width:100%;text-align:left;" aria-expanded="true">Tools ▴</button>
+    <div id="tools-dropdown">
       <a href="/source-citation">Source Citation Tool</a>
     </div>
   </aside>
@@ -26,26 +25,23 @@
   <div class="dashboard">
     <h1>Source Citation Tool</h1>
     <div class="card citation-card">
-      <div class="citation-grid">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <input id="citation-author" placeholder="Author (Last, First)">
         <input id="citation-title" placeholder="Page or article title">
         <input id="citation-site" placeholder="Website name">
         <input id="citation-url" placeholder="https://example.com/page">
         <input id="citation-date" type="date" placeholder="Publication date">
       </div>
-
       <div class="assignment-tabs">
         <button id="citation-mla" class="tab-btn active">MLA</button>
         <button id="citation-apa" class="tab-btn">APA</button>
       </div>
-
-      <div class="citation-actions">
+      <div style="display:flex;gap:8px;margin:10px 0;">
         <button id="citation-generate" class="google-btn">Generate Citation</button>
         <button id="citation-copy-all" class="tab-btn">Copy All</button>
       </div>
-
-      <p id="citation-output" class="citation-output">Your citation will appear here.</p>
-      <ul id="citation-history" class="citation-history"></ul>
+      <p id="citation-output" style="color:var(--text-secondary);font-size:14px;">Your citation will appear here.</p>
+      <ul id="citation-history"></ul>
     </div>
   </div>
 
