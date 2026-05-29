@@ -173,43 +173,122 @@ html, body { overflow-x: hidden; }
    ===================================================================== */
 .edit-mode .card { outline: 2px dashed rgba(99,102,241,0.35); outline-offset: 2px; }
 
+/* Hidden cards show as a slim labelled strip */
+.card-hidden {
+  min-height: 0 !important;
+  height: 44px !important;
+  overflow: hidden;
+  opacity: 0.5;
+}
+.card-hidden > *:not(.card-edit-overlay):not(.card-drag-handle-edit):not(.card-resize-handle-edit) {
+  display: none;
+}
+.card-hidden::before {
+  content: "Hidden — enter edit mode to restore";
+  display: flex; align-items: center; justify-content: center;
+  height: 44px; width: 100%;
+  color: var(--text-muted); font-size: 12px; font-style: italic;
+}
+.edit-mode .card-hidden { opacity: 0.75; }
+.edit-mode .card-hidden > * { display: block; }
+.edit-mode .card-hidden::before { display: none; }
+
 .card-edit-overlay {
   display: none;
-  position: absolute; top: 0; right: -240px;
-  width: 228px; background: var(--sidebar-bg);
+  position: absolute;
+  top: 0;
+  left: calc(100% + 10px);
+  width: 228px;
+  background: var(--sidebar-bg);
   border: 1px solid var(--card-border); border-radius: 12px;
-  padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.14);
-  z-index: 100; flex-direction: column; gap: 10px;
+  padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+  z-index: 200; flex-direction: column; gap: 10px;
+}
+.card-edit-overlay.overlay-flip-left {
+  left: auto;
+  right: calc(100% + 10px);
 }
 .edit-mode .card:hover .card-edit-overlay { display: flex; }
+.card-edit-overlay:hover { display: flex; }
 
-.edit-ctrl-label {
+.edit-ctrl-wrap {
   display: flex; flex-direction: column; gap: 4px;
+}
+.edit-ctrl-wrap.edit-ctrl-row {
+  flex-direction: row; align-items: center; justify-content: space-between;
+}
+.edit-ctrl-label {
   font-size: 11px; font-weight: 600; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.05em;
 }
-.edit-ctrl-label.edit-ctrl-row { flex-direction: row; align-items: center; gap: 8px; }
-
 .edit-ctrl-input {
   border: 1px solid var(--btn-border); border-radius: 8px;
   padding: 6px 8px; font-size: 13px; background: var(--input-bg);
-  color: var(--text-primary); outline: none; width: 100%;
+  color: var(--text-primary); outline: none; width: 100%; box-sizing: border-box;
 }
 .edit-ctrl-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.15); }
-
 .edit-ctrl-range { width: 100%; accent-color: #6366f1; cursor: pointer; }
-
+.edit-ctrl-size-val { font-size: 11px; color: var(--text-muted); align-self: center; min-width: 28px; }
 .edit-color-picker {
   width: 40px; height: 28px; border: 1px solid var(--btn-border);
   border-radius: 6px; cursor: pointer; padding: 2px; background: transparent;
 }
-
 .edit-ctrl-btn {
-  align-self: flex-start; border: 1px solid var(--btn-border);
-  background: var(--btn-bg); color: var(--text-secondary);
-  border-radius: 6px; padding: 3px 8px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--btn-border); background: var(--btn-bg);
+  color: var(--text-secondary); border-radius: 6px;
+  padding: 3px 8px; font-size: 12px; cursor: pointer; white-space: nowrap;
 }
 .edit-ctrl-btn:hover { background: var(--dash-bg); }
+.edit-toggle-btn {
+  border: 1px solid var(--btn-border); background: var(--btn-bg);
+  color: var(--text-secondary); border-radius: 999px;
+  padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.edit-toggle-btn.active { background: #e0e7ff; border-color: #c7d2fe; color: #3730a3; }
+
+/* =====================================================================
+   EDIT MODE — DRAG CLONE
+   ===================================================================== */
+.card-drag-clone {
+  position: fixed; z-index: 9999; pointer-events: none;
+  opacity: 0.88; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  border-radius: 16px; transform: rotate(1.5deg) scale(1.02);
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  padding: 20px; overflow: hidden;
+}
+.card-dragging { opacity: 0; pointer-events: none; }
+.card-placeholder {
+  background: transparent; border: 2px dashed #c7d2fe;
+  border-radius: 16px; min-height: 80px; transition: min-height 0.1s;
+}
+.card-placeholder.card-wide { grid-column: 1 / -1; }
+
+/* =====================================================================
+   EDIT MODE — HANDLES
+   ===================================================================== */
+.card-drag-handle-edit {
+  position: absolute; bottom: 10px; left: 10px;
+  width: 28px; height: 28px; background: var(--btn-bg);
+  border: 1px solid var(--btn-border); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--text-muted);
+  cursor: grab; user-select: none;
+  opacity: 0; transition: opacity 0.15s; z-index: 5;
+}
+.edit-mode .card .card-drag-handle-edit { opacity: 0.5; }
+.edit-mode .card:hover .card-drag-handle-edit { opacity: 1; }
+.card-drag-handle-edit:active { cursor: grabbing; }
+
+.card-resize-handle-edit {
+  position: absolute; bottom: 0; right: 0;
+  width: 20px; height: 20px; cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, #6366f1 50%);
+  border-radius: 0 0 16px 0;
+  opacity: 0; transition: opacity 0.15s; z-index: 5;
+}
+.edit-mode .card:hover .card-resize-handle-edit { opacity: 0.7; }
+.card-resize-handle-edit:hover { opacity: 1 !important; }
 
 /* =====================================================================
    EDIT MODE FLOATING BAR
@@ -220,21 +299,21 @@ html, body { overflow-x: hidden; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 24px; z-index: 2000;
   box-shadow: 0 2px 12px rgba(49,46,129,0.3);
-  transition: transform 0.2s;
 }
 .edit-mode-bar.hidden { display: none; }
-
 .edit-mode-label { font-size: 13px; font-weight: 500; }
-
 .edit-mode-done-btn {
-  background: #ffffff; color: #312e81;
-  border: none; border-radius: 8px;
-  padding: 6px 18px; font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: background 0.15s;
+  background: #ffffff; color: #312e81; border: none; border-radius: 8px;
+  padding: 6px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
 }
 .edit-mode-done-btn:hover { background: #e0e7ff; }
+.edit-mode-reset-btn {
+  background: transparent; color: #c7d2fe;
+  border: 1px solid rgba(199,210,254,0.4); border-radius: 8px;
+  padding: 6px 14px; font-size: 13px; cursor: pointer;
+}
+.edit-mode-reset-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
-/* When edit mode bar is visible, push dashboard down */
 body.edit-mode .dashboard { padding-top: 80px; }
 body.edit-mode .menu-toggle { top: 56px; }
 
