@@ -118,10 +118,20 @@ function applyCardCustom() {
       if (h2) h2.style.fontSize = opts.headerSize + "px";
     }
     if (opts.wide !== undefined) card.classList.toggle("card-wide", opts.wide);
+    if (opts.hidden) card.classList.add("card-hidden");
+    if (opts.minHeight) card.style.minHeight = opts.minHeight + "px";
   });
 }
 
-function applyCardOrder(order) {
+function applyAllPrefs() {
+  applyTheme(userPrefs.theme || "default");
+  if (userPrefs.customBg) {
+    document.documentElement.style.setProperty("--dash-bg", userPrefs.customBg);
+    document.documentElement.style.setProperty("--page-bg", userPrefs.customBg);
+  }
+  if (userPrefs.cardOrder) applyCardOrder(userPrefs.cardOrder);
+  applyCardCustom();
+}
   const grid = document.getElementById("dashboard-grid");
   if (!grid) return;
   const cards = Array.from(grid.querySelectorAll(".card[data-card]"));
@@ -173,21 +183,9 @@ function setupSettings() {
   editLayoutBtn && editLayoutBtn.addEventListener("click", () => { close(); enterEditMode(); });
 
   resetLayoutBtn && resetLayoutBtn.addEventListener("click", () => {
-    delete userPrefs.cardOrder;
-    delete userPrefs.cardCustom;
-    savePrefs();
-    applyCardOrder(DEFAULT_CARD_ORDER);
-    // Restore wide defaults
-    ["drive","calendar"].forEach(id => document.querySelector(`.card[data-card="${id}"]`)?.classList.add("card-wide"));
-    ["classes","assignments"].forEach(id => document.querySelector(`.card[data-card="${id}"]`)?.classList.remove("card-wide"));
-    // Clear inline styles
-    document.querySelectorAll(".card[data-card]").forEach(c => {
-      c.style.background = ""; c.style.borderLeft = ""; c.style.borderRadius = "";
-      const h2 = c.querySelector("h2"); if (h2) { h2.style.fontSize = ""; }
-    });
-    applyTheme(userPrefs.theme || "default");
+    resetLayoutOnly();
     resetLayoutBtn.textContent = "Reset ✓";
-    setTimeout(() => resetLayoutBtn.textContent = "Reset to default", 1500);
+    setTimeout(() => resetLayoutBtn.textContent = "Reset layout to default", 1500);
   });
 }
 
@@ -226,6 +224,49 @@ function renderThemeGrid() {
     });
     grid.appendChild(swatch);
   });
+
+  // Background colour override (rendered below the swatches)
+  const container = grid.parentElement;
+  let bgSection = container.querySelector(".custom-bg-section");
+  if (!bgSection) {
+    bgSection = document.createElement("div");
+    bgSection.className = "custom-bg-section";
+
+    const title = document.createElement("div");
+    title.className = "settings-section-title";
+    title.textContent = "Background colour";
+    bgSection.appendChild(title);
+
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:10px;padding:0 16px 12px;";
+
+    const picker = document.createElement("input");
+    picker.type = "color";
+    picker.className = "edit-color-picker";
+    picker.value = userPrefs.customBg || rgbToHex(getComputedStyle(document.body).backgroundColor) || "#f5f7fb";
+
+    picker.addEventListener("input", () => {
+      userPrefs.customBg = picker.value;
+      savePrefs();
+      document.documentElement.style.setProperty("--dash-bg", picker.value);
+      document.documentElement.style.setProperty("--page-bg", picker.value);
+    });
+
+    const resetBg = document.createElement("button");
+    resetBg.className = "edit-ctrl-btn";
+    resetBg.textContent = "↺ Reset";
+    resetBg.addEventListener("click", () => {
+      delete userPrefs.customBg;
+      savePrefs();
+      applyTheme(userPrefs.theme || "default");
+      picker.value = rgbToHex(getComputedStyle(document.body).backgroundColor) || "#f5f7fb";
+    });
+
+    row.appendChild(picker);
+    row.appendChild(resetBg);
+    bgSection.appendChild(row);
+    container.appendChild(bgSection);
+  }
 }
 
 // =====================================================================
@@ -233,90 +274,167 @@ function renderThemeGrid() {
 // =====================================================================
 
 let editModeActive = false;
-let editDragging = null;
-let editPlaceholder = null;
+
+// --- Drag state ---
+let editDragging = null;       // the card being dragged
+let editDragClone = null;      // floating visual clone following cursor
+let editPlaceholder = null;    // slot left in the grid
 let editDragOffsetX = 0;
 let editDragOffsetY = 0;
+
+// --- Resize state ---
+let editResizing = null;
+let editResizeStartX = 0, editResizeStartY = 0;
+let editResizeStartW = 0, editResizeStartH = 0;
 
 function enterEditMode() {
   if (editModeActive) return;
   editModeActive = true;
   document.body.classList.add("edit-mode");
-
-  // Show floating done bar
   const bar = document.getElementById("edit-mode-bar");
   if (bar) bar.classList.remove("hidden");
-
   const grid = document.getElementById("dashboard-grid");
   if (!grid) return;
-
-  grid.querySelectorAll(".card[data-card]").forEach(card => {
-    attachEditOverlay(card);
-  });
+  grid.querySelectorAll(".card[data-card]").forEach(card => attachEditOverlay(card));
 }
 
 function exitEditMode() {
   if (!editModeActive) return;
   editModeActive = false;
   document.body.classList.remove("edit-mode");
-
   const bar = document.getElementById("edit-mode-bar");
   if (bar) bar.classList.add("hidden");
-
-  // Remove all edit overlays
   document.querySelectorAll(".card-edit-overlay").forEach(el => el.remove());
   document.querySelectorAll(".card-drag-handle-edit").forEach(el => el.remove());
+  document.querySelectorAll(".card-resize-handle-edit").forEach(el => el.remove());
+}
+
+function resetLayoutOnly() {
+  delete userPrefs.cardOrder;
+  // Reset wide/hidden/size but keep card colours & title customisations
+  const custom = userPrefs.cardCustom || {};
+  Object.keys(custom).forEach(id => {
+    delete custom[id].wide;
+    delete custom[id].hidden;
+    delete custom[id].minHeight;
+  });
+  userPrefs.cardCustom = custom;
+  savePrefs();
+
+  applyCardOrder(DEFAULT_CARD_ORDER);
+  ["drive","calendar"].forEach(id => {
+    const c = document.querySelector(`.card[data-card="${id}"]`);
+    if (c) { c.classList.add("card-wide"); c.style.minHeight = ""; c.classList.remove("card-hidden"); }
+  });
+  ["classes","assignments"].forEach(id => {
+    const c = document.querySelector(`.card[data-card="${id}"]`);
+    if (c) { c.classList.remove("card-wide"); c.style.minHeight = ""; c.classList.remove("card-hidden"); }
+  });
+  applyTheme(userPrefs.theme || "default");
 }
 
 function attachEditOverlay(card) {
-  // Drag handle
+  const cardId = card.dataset.card;
+
+  // ---- Drag handle (top-left of card) ----
   const handle = document.createElement("div");
   handle.className = "card-drag-handle-edit";
-  handle.innerHTML = "⠿ drag";
+  handle.innerHTML = "⠿";
   handle.title = "Drag to reorder";
   card.appendChild(handle);
 
   handle.addEventListener("mousedown", function (e) {
     if (!editModeActive) return;
     e.preventDefault();
-    editDragging = card;
-    card.classList.add("card-dragging");
+    e.stopPropagation();
 
+    const rect = card.getBoundingClientRect();
+    editDragOffsetX = e.clientX - rect.left;
+    editDragOffsetY = e.clientY - rect.top;
+
+    // Create a visual clone that follows the cursor
+    editDragClone = card.cloneNode(true);
+    editDragClone.classList.add("card-drag-clone");
+    editDragClone.style.width  = rect.width  + "px";
+    editDragClone.style.height = rect.height + "px";
+    editDragClone.style.left   = rect.left   + "px";
+    editDragClone.style.top    = rect.top    + "px";
+    document.body.appendChild(editDragClone);
+
+    // Leave a placeholder in the grid
     editPlaceholder = document.createElement("div");
     editPlaceholder.className = "card-placeholder" + (card.classList.contains("card-wide") ? " card-wide" : "");
+    editPlaceholder.style.minHeight = rect.height + "px";
     const grid = document.getElementById("dashboard-grid");
-    grid.insertBefore(editPlaceholder, card.nextSibling);
+    grid.insertBefore(editPlaceholder, card);
+    card.classList.add("card-dragging"); // hide original while dragging
+    editDragging = card;
   });
 
-  // Edit overlay toolbar (shown on hover in edit mode)
+  // ---- Resize handle (bottom-right corner) ----
+  const resizeHandle = document.createElement("div");
+  resizeHandle.className = "card-resize-handle-edit";
+  resizeHandle.title = "Drag to resize";
+  card.appendChild(resizeHandle);
+
+  resizeHandle.addEventListener("mousedown", function (e) {
+    if (!editModeActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    editResizing = card;
+    editResizeStartX = e.clientX;
+    editResizeStartY = e.clientY;
+    editResizeStartW = card.offsetWidth;
+    editResizeStartH = card.offsetHeight;
+  });
+
+  // ---- Toolbar overlay ----
   const overlay = document.createElement("div");
   overlay.className = "card-edit-overlay";
 
-  // BG colour picker
-  const bgLabel = document.createElement("label");
-  bgLabel.className = "edit-ctrl-label";
-  bgLabel.textContent = "Card colour";
+  // Position it smartly: check if card is in right half of screen
+  // CSS handles this via a class we toggle after DOM insertion
+  card.appendChild(overlay);
+
+  // After inserting, check if it overflows right edge and flip left
+  requestAnimationFrame(() => {
+    const cardRect = card.getBoundingClientRect();
+    const overlayWidth = 232;
+    if (cardRect.right + overlayWidth > window.innerWidth - 16) {
+      overlay.classList.add("overlay-flip-left");
+    }
+  });
+
+  // Helper to build a labelled row
+  function ctrl(labelText, inputEl) {
+    const wrap = document.createElement("div");
+    wrap.className = "edit-ctrl-wrap";
+    const lbl = document.createElement("span");
+    lbl.className = "edit-ctrl-label";
+    lbl.textContent = labelText;
+    wrap.appendChild(lbl);
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+
+  // Card background colour
   const bgPicker = document.createElement("input");
   bgPicker.type = "color";
   bgPicker.className = "edit-color-picker";
-  const cardId = card.dataset.card;
   bgPicker.value = userPrefs.cardCustom?.[cardId]?.bg
     ? userPrefs.cardCustom[cardId].bg
     : rgbToHex(getComputedStyle(card).backgroundColor) || "#ffffff";
-  bgPicker.addEventListener("input", function () {
+  bgPicker.addEventListener("input", () => {
     setCardPref(cardId, "bg", bgPicker.value);
     card.style.background = bgPicker.value;
     card.style.borderLeft = "none";
     card.style.borderRadius = "16px";
   });
-  bgLabel.appendChild(bgPicker);
 
-  // Reset card colour
-  const bgReset = document.createElement("button");
-  bgReset.className = "edit-ctrl-btn";
-  bgReset.textContent = "↺";
-  bgReset.title = "Reset card colour";
-  bgReset.addEventListener("click", function () {
+  const bgResetBtn = document.createElement("button");
+  bgResetBtn.className = "edit-ctrl-btn";
+  bgResetBtn.textContent = "↺ Reset";
+  bgResetBtn.addEventListener("click", () => {
     setCardPref(cardId, "bg", null);
     card.style.background = "";
     card.style.borderLeft = "";
@@ -325,66 +443,89 @@ function attachEditOverlay(card) {
     bgPicker.value = rgbToHex(getComputedStyle(card).backgroundColor) || "#ffffff";
   });
 
-  // Header text
-  const headerLabel = document.createElement("label");
-  headerLabel.className = "edit-ctrl-label";
-  headerLabel.textContent = "Title";
-  const headerInput = document.createElement("input");
-  headerInput.type = "text";
-  headerInput.className = "edit-ctrl-input";
+  const bgRow = document.createElement("div");
+  bgRow.className = "edit-ctrl-wrap";
+  const bgLbl = document.createElement("span"); bgLbl.className = "edit-ctrl-label"; bgLbl.textContent = "Card colour";
+  bgRow.appendChild(bgLbl); bgRow.appendChild(bgPicker); bgRow.appendChild(bgResetBtn);
+
+  // Title text
   const h2 = card.querySelector("h2");
   const emojiPrefix = h2 ? (h2.textContent.match(/^(\S+\s)/)?.[1] || "") : "";
-  const currentText = h2 ? h2.textContent.replace(emojiPrefix, "") : "";
-  headerInput.value = userPrefs.cardCustom?.[cardId]?.headerText || currentText;
-  headerInput.placeholder = currentText;
-  headerInput.addEventListener("input", function () {
-    setCardPref(cardId, "headerText", headerInput.value);
-    if (h2) h2.textContent = emojiPrefix + headerInput.value;
+  const currentText = h2 ? h2.textContent.replace(emojiPrefix, "").trim() : "";
+  const titleInput = document.createElement("input");
+  titleInput.type = "text";
+  titleInput.className = "edit-ctrl-input";
+  titleInput.value = userPrefs.cardCustom?.[cardId]?.headerText || currentText;
+  titleInput.placeholder = currentText;
+  titleInput.addEventListener("input", () => {
+    setCardPref(cardId, "headerText", titleInput.value);
+    if (h2) h2.textContent = emojiPrefix + titleInput.value;
   });
-  headerLabel.appendChild(headerInput);
 
-  // Header font size
-  const sizeLabel = document.createElement("label");
-  sizeLabel.className = "edit-ctrl-label";
-  sizeLabel.textContent = "Title size";
+  // Title size
+  const sizeVal = document.createElement("span");
+  sizeVal.textContent = (userPrefs.cardCustom?.[cardId]?.headerSize || 18) + "px";
+  sizeVal.className = "edit-ctrl-size-val";
   const sizeInput = document.createElement("input");
-  sizeInput.type = "range";
-  sizeInput.min = "12";
-  sizeInput.max = "32";
-  sizeInput.step = "1";
+  sizeInput.type = "range"; sizeInput.min = "12"; sizeInput.max = "32"; sizeInput.step = "1";
   sizeInput.className = "edit-ctrl-range";
   sizeInput.value = userPrefs.cardCustom?.[cardId]?.headerSize || 18;
-  sizeInput.addEventListener("input", function () {
+  sizeInput.addEventListener("input", () => {
     setCardPref(cardId, "headerSize", parseInt(sizeInput.value));
     if (h2) h2.style.fontSize = sizeInput.value + "px";
+    sizeVal.textContent = sizeInput.value + "px";
   });
-  sizeLabel.appendChild(sizeInput);
+  const sizeRow = document.createElement("div");
+  sizeRow.className = "edit-ctrl-wrap";
+  const sizeLbl = document.createElement("span"); sizeLbl.className = "edit-ctrl-label"; sizeLbl.textContent = "Title size";
+  sizeRow.appendChild(sizeLbl); sizeRow.appendChild(sizeInput); sizeRow.appendChild(sizeVal);
 
-  // Wide toggle
-  const wideLabel = document.createElement("label");
-  wideLabel.className = "edit-ctrl-label edit-ctrl-row";
-  const wideCheck = document.createElement("input");
-  wideCheck.type = "checkbox";
-  wideCheck.checked = card.classList.contains("card-wide");
-  wideCheck.addEventListener("change", function () {
-    setCardPref(cardId, "wide", wideCheck.checked);
-    card.classList.toggle("card-wide", wideCheck.checked);
+  // Full width toggle
+  const wideToggle = makeToggleRow("Full width", card.classList.contains("card-wide"), (val) => {
+    setCardPref(cardId, "wide", val);
+    card.classList.toggle("card-wide", val);
   });
-  wideLabel.appendChild(wideCheck);
-  wideLabel.appendChild(document.createTextNode(" Full width"));
 
-  overlay.appendChild(bgLabel);
-  overlay.appendChild(bgReset);
-  overlay.appendChild(headerLabel);
-  overlay.appendChild(sizeLabel);
-  overlay.appendChild(wideLabel);
-  card.appendChild(overlay);
+  // Hide card toggle
+  const isHidden = userPrefs.cardCustom?.[cardId]?.hidden || false;
+  const hideToggle = makeToggleRow("Hide card", isHidden, (val) => {
+    setCardPref(cardId, "hidden", val);
+    card.classList.toggle("card-hidden", val);
+  });
+
+  overlay.appendChild(bgRow);
+  overlay.appendChild(ctrl("Title", titleInput));
+  overlay.appendChild(sizeRow);
+  overlay.appendChild(wideToggle);
+  overlay.appendChild(hideToggle);
+}
+
+function makeToggleRow(labelText, initialValue, onChange) {
+  const row = document.createElement("div");
+  row.className = "edit-ctrl-wrap edit-ctrl-row";
+  const lbl = document.createElement("span");
+  lbl.className = "edit-ctrl-label"; lbl.textContent = labelText;
+
+  const toggle = document.createElement("button");
+  toggle.className = "edit-toggle-btn" + (initialValue ? " active" : "");
+  toggle.textContent = initialValue ? "On" : "Off";
+  let val = initialValue;
+  toggle.addEventListener("click", () => {
+    val = !val;
+    toggle.textContent = val ? "On" : "Off";
+    toggle.classList.toggle("active", val);
+    onChange(val);
+  });
+
+  row.appendChild(lbl);
+  row.appendChild(toggle);
+  return row;
 }
 
 function setCardPref(cardId, key, value) {
   if (!userPrefs.cardCustom) userPrefs.cardCustom = {};
   if (!userPrefs.cardCustom[cardId]) userPrefs.cardCustom[cardId] = {};
-  if (value === null) {
+  if (value === null || value === undefined) {
     delete userPrefs.cardCustom[cardId][key];
   } else {
     userPrefs.cardCustom[cardId][key] = value;
@@ -392,38 +533,63 @@ function setCardPref(cardId, key, value) {
   savePrefs();
 }
 
-// Edit mode drag-to-reorder (mousemove / mouseup on document)
+// ---- Global mousemove: handle both drag and resize ----
 document.addEventListener("mousemove", function (e) {
-  if (!editDragging) return;
-  const grid = document.getElementById("dashboard-grid");
-  if (!grid) return;
-  const cards = Array.from(grid.querySelectorAll(".card[data-card]:not(.card-dragging), .card-placeholder"));
-  let closest = null, closestDist = Infinity;
-  cards.forEach(c => {
-    const r = c.getBoundingClientRect();
-    const dist = Math.hypot(e.clientX - (r.left + r.width/2), e.clientY - (r.top + r.height/2));
-    if (dist < closestDist) { closestDist = dist; closest = c; }
-  });
-  if (closest && closest !== editPlaceholder) {
-    const r = closest.getBoundingClientRect();
-    grid.insertBefore(editPlaceholder, e.clientY > r.top + r.height/2 ? closest.nextSibling : closest);
+  // Drag
+  if (editDragClone && editDragging) {
+    editDragClone.style.left = (e.clientX - editDragOffsetX) + "px";
+    editDragClone.style.top  = (e.clientY - editDragOffsetY) + "px";
+
+    const grid = document.getElementById("dashboard-grid");
+    if (!grid) return;
+    const candidates = Array.from(grid.querySelectorAll(".card[data-card]:not(.card-dragging), .card-placeholder"));
+    let closest = null, closestDist = Infinity;
+    candidates.forEach(c => {
+      const r = c.getBoundingClientRect();
+      const dist = Math.hypot(e.clientX - (r.left + r.width/2), e.clientY - (r.top + r.height/2));
+      if (dist < closestDist) { closestDist = dist; closest = c; }
+    });
+    if (closest && closest !== editPlaceholder) {
+      const r = closest.getBoundingClientRect();
+      grid.insertBefore(editPlaceholder, e.clientY > r.top + r.height/2 ? closest.nextSibling : closest);
+    }
+  }
+
+  // Resize
+  if (editResizing) {
+    const newW = Math.max(200, editResizeStartW + (e.clientX - editResizeStartX));
+    const newH = Math.max(100, editResizeStartH + (e.clientY - editResizeStartY));
+    editResizing.style.minHeight = newH + "px";
+    // Only constrain width on non-wide cards
+    if (!editResizing.classList.contains("card-wide")) {
+      editResizing.style.width = newW + "px";
+    }
+    setCardPref(editResizing.dataset.card, "minHeight", newH);
   }
 });
 
+// ---- Global mouseup: finish drag or resize ----
 document.addEventListener("mouseup", function () {
-  if (!editDragging) return;
-  const grid = document.getElementById("dashboard-grid");
-  if (grid && editPlaceholder) {
-    grid.insertBefore(editDragging, editPlaceholder);
-    editPlaceholder.remove();
+  if (editDragClone && editDragging) {
+    editDragClone.remove();
+    editDragClone = null;
+    const grid = document.getElementById("dashboard-grid");
+    if (grid && editPlaceholder && editPlaceholder.parentNode === grid) {
+      grid.insertBefore(editDragging, editPlaceholder);
+      editPlaceholder.remove();
+    }
+    editDragging.classList.remove("card-dragging");
+    const order = Array.from(grid.querySelectorAll(".card[data-card]")).map(c => c.dataset.card);
+    userPrefs.cardOrder = order;
+    savePrefs();
+    applyTheme(userPrefs.theme || "default");
+    editDragging = null;
+    editPlaceholder = null;
   }
-  editDragging.classList.remove("card-dragging");
-  const order = Array.from(grid.querySelectorAll(".card[data-card]")).map(c => c.dataset.card);
-  userPrefs.cardOrder = order;
-  savePrefs();
-  applyTheme(userPrefs.theme || "default");
-  editDragging = null;
-  editPlaceholder = null;
+
+  if (editResizing) {
+    editResizing = null;
+  }
 });
 
 // Helper: computed rgb → hex
@@ -850,11 +1016,20 @@ async function loadData() {
 }
 
 // =====================================================================
-// EDIT MODE BAR — wire up Done button
+// EDIT MODE BAR — wire up Done and Reset buttons
 // =====================================================================
 document.addEventListener("DOMContentLoaded", function () {
-  const doneBtn = document.getElementById("edit-mode-done");
-  if (doneBtn) doneBtn.addEventListener("click", exitEditMode);
+  const doneBtn  = document.getElementById("edit-mode-done");
+  const resetBtn = document.getElementById("edit-mode-reset");
+  if (doneBtn)  doneBtn.addEventListener("click", exitEditMode);
+  if (resetBtn) resetBtn.addEventListener("click", () => {
+    resetLayoutOnly();
+    // Re-attach overlays since DOM changed
+    exitEditMode();
+    enterEditMode();
+    resetBtn.textContent = "Reset ✓";
+    setTimeout(() => resetBtn.textContent = "Reset layout", 1500);
+  });
 });
 
 // =====================================================================
