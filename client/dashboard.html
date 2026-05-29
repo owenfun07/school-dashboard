@@ -2,14 +2,10 @@
 <html>
 <head>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TJ2NDQJZKN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-TJ2NDQJZKN');
-  </script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-TJ2NDQJZKN');</script>
   <title>Dashboard</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,60 +23,57 @@
 
   <div id="menu-overlay" class="menu-overlay"></div>
 
-  <!-- ===== SETTINGS PANEL ===== -->
+  <!-- SETTINGS PANEL -->
   <div id="settings-overlay" class="settings-overlay hidden"></div>
   <aside id="settings-panel" class="settings-panel hidden">
-
     <div class="settings-header">
       <span class="settings-title">Settings</span>
-      <button id="settings-close" class="settings-close" aria-label="Close settings">×</button>
+      <button id="settings-close" class="settings-close">×</button>
     </div>
 
-    <!-- Main settings view -->
     <div id="settings-main" class="settings-view">
-
       <div class="settings-section">
         <div class="settings-row" id="notes-toggle-row">
           <span class="settings-row-icon">📝</span>
           <span class="settings-row-label">Notes</span>
           <button id="notes-toggle" class="settings-toggle-btn" aria-pressed="false">Off</button>
         </div>
-
+        <div class="settings-row" id="edit-layout-btn">
+          <span class="settings-row-icon">✏️</span>
+          <span class="settings-row-label">Edit layout</span>
+          <span class="settings-row-arrow">›</span>
+        </div>
         <div class="settings-row" id="open-customise">
           <span class="settings-row-icon">🎨</span>
           <span class="settings-row-label">Customise your look</span>
           <span class="settings-row-arrow">›</span>
         </div>
       </div>
-
       <div class="settings-section settings-section-bottom">
         <div class="settings-row settings-row-danger" id="logout-btn">
           <span class="settings-row-icon">↩</span>
           <span class="settings-row-label">Log out</span>
         </div>
       </div>
-
     </div>
 
-    <!-- Customise view -->
     <div id="settings-customise" class="settings-view hidden">
-
       <button id="customise-back" class="settings-back">‹ Back</button>
       <div class="settings-section-title">Theme</div>
-
-      <div class="theme-grid" id="theme-grid">
-        <!-- populated by JS -->
-      </div>
-
-      <div class="settings-section-title" style="margin-top:24px;">Layout</div>
-      <p class="settings-hint">Drag cards to reorder them. Use the handle on any card's bottom-right corner to resize.</p>
-      <button id="reset-layout-btn" class="settings-action-btn">Reset layout to default</button>
-
+      <div class="theme-grid" id="theme-grid"></div>
+      <div class="settings-section-title" style="margin-top:20px;">Layout</div>
+      <p class="settings-hint">Use "Edit layout" from the main settings screen to drag cards, resize them, change colours and titles.</p>
+      <button id="reset-layout-btn" class="settings-action-btn">Reset to default</button>
     </div>
-
   </aside>
 
-  <!-- ===== DASHBOARD ===== -->
+  <!-- EDIT MODE BAR -->
+  <div id="edit-mode-bar" class="edit-mode-bar hidden">
+    <span class="edit-mode-label">✏️ Edit mode — hover a card to customise it</span>
+    <button id="edit-mode-done" class="edit-mode-done-btn">Done</button>
+  </div>
+
+  <!-- DASHBOARD -->
   <div class="dashboard">
     <div class="dashboard-header">
       <h1>Dashboard</h1>
@@ -97,7 +90,7 @@
       <div class="card" data-card="assignments">
         <div class="card-header-row">
           <h2>📝 Assignments</h2>
-          <button id="assignment-refresh" class="refresh-btn" title="Refresh assignments">↻</button>
+          <button id="assignment-refresh" class="refresh-btn" title="Refresh">↻</button>
         </div>
         <p id="selected-course" class="selected-course">Select a class to view assignments.</p>
         <div class="assignment-tabs">
@@ -113,12 +106,12 @@
         <h2>📁 Drive</h2>
         <div class="drive-toolbar">
           <input id="drive-search" class="drive-search" type="text" placeholder="Search Drive files...">
-          <button id="drive-search-btn" class="refresh-btn" title="Search Drive">⌕</button>
+          <button id="drive-search-btn" class="refresh-btn" title="Search">⌕</button>
         </div>
         <div class="assignment-tabs">
           <button class="tab-btn active" data-drive-filter="recent">Recents</button>
           <button class="tab-btn" data-drive-filter="starred">Starred</button>
-          <button id="drive-view-toggle" class="tab-btn" type="button" title="Toggle grid/list view">▦ Grid</button>
+          <button id="drive-view-toggle" class="tab-btn" type="button">▦ Grid</button>
         </div>
         <div id="drive-loader" class="loader hidden"></div>
         <ul id="drive-files"></ul>
@@ -126,8 +119,8 @@
 
       <div class="card card-wide" data-card="calendar">
         <div class="card-header-row">
-          <h2>📅 Upcoming Events by Category</h2>
-          <button id="calendar-refresh" class="refresh-btn" title="Refresh calendar">↻</button>
+          <h2>📅 Upcoming Events</h2>
+          <button id="calendar-refresh" class="refresh-btn" title="Refresh">↻</button>
         </div>
         <div id="calendar-loader" class="loader hidden"></div>
         <div class="event-groups" id="event-groups"></div>
@@ -137,7 +130,7 @@
     </div>
   </div>
 
-  <!-- ===== NOTES LAYER ===== -->
+  <!-- NOTES LAYER -->
   <div id="notes-layer" class="notes-layer hidden">
     <button id="add-note" class="add-note-fab" type="button" title="Add note">+</button>
     <div id="notes-tray" class="notes-tray" style="display:none"></div>
