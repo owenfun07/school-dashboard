@@ -786,8 +786,24 @@ async function fetchJsonSafe(url) {
     return json;
   } catch(_) {
     if (!response.ok) throw new Error(text || `Request failed: ${response.status}`);
-    throw new Error("Invalid JSON response");
+    throw new Error("relogin");
   }
+}
+
+function friendlyError(msg) {
+  if (!msg) return "Please re-login and refresh the page.";
+  const m = msg.toLowerCase();
+  if (m === "relogin" || m.includes("invalid") || m.includes("auth") || m.includes("401") || m.includes("403") || m.includes("token")) {
+    return "Please re-login and refresh the page.";
+  }
+  return msg;
+}
+
+function isAuthError(msg) {
+  if (!msg) return true;
+  const m = msg.toLowerCase();
+  return m === "relogin" || m.includes("invalid") || m.includes("auth") ||
+         m.includes("401") || m.includes("403") || m.includes("token");
 }
 
 function setupReloginListener() {
@@ -862,8 +878,8 @@ async function loadAssignments(courseId, courseName, forceRefresh=false) {
     assignmentCache = (data.courseWork||[]).map(w=>({...w,due:courseWorkDueDate(w)})).sort((a,b)=>(!a.due&&!b.due)?0:!a.due?1:!b.due?-1:a.due-b.due);
     selectedCourse.textContent=`Assignments for ${courseName}`; renderAssignments();
   } catch(err) {
-    selectedCourse.textContent=`Could not load: ${err.message}`; assignmentCache=[]; renderAssignments();
-    if (err.message.toLowerCase().includes("invalid")||err.message.toLowerCase().includes("auth")) showReloginPrompt(assignmentsList);
+    selectedCourse.textContent=`Could not load: ${friendlyError(err.message)}`; assignmentCache=[]; renderAssignments();
+    showReloginPrompt(assignmentsList);
   } finally { setLoader(assignmentLoader,false); }
 }
 
@@ -897,8 +913,8 @@ async function loadCalendar(forceRefresh=false) {
     const data=await fetchJsonSafe(`/api/calendar?token=${encodeURIComponent(token)}`);
     renderEventGroups((data.items||[]).sort((a,b)=>eventStartDate(a)-eventStartDate(b)));
   } catch(err) {
-    groupsContainer.innerHTML=`<div class="event-group"><h3>Error</h3><ul><li>${err.message}</li></ul></div>`;
-    if (err.message.toLowerCase().includes("auth")) showReloginPrompt(groupsContainer);
+    groupsContainer.innerHTML=`<div class="event-group"><h3>Error</h3><ul><li>${friendlyError(err.message)}</li></ul></div>`;
+    showReloginPrompt(groupsContainer);
   } finally { setLoader(calendarLoader,false); }
 }
 
@@ -925,8 +941,8 @@ async function loadClasses() {
       });
     } else { const li=document.createElement("li"); li.textContent="No classes found."; classesList.appendChild(li); }
   } catch(err) {
-    const li=document.createElement("li"); li.textContent=`Could not load: ${err.message}`; classesList.appendChild(li);
-    if (err.message.toLowerCase().includes("auth")) showReloginPrompt(classesList);
+    const li=document.createElement("li"); li.textContent=`Could not load: ${friendlyError(err.message)}`; classesList.appendChild(li);
+    showReloginPrompt(classesList);
   }
 }
 
@@ -968,8 +984,8 @@ async function loadDriveFiles(forceRefresh=false) {
     const data=await fetchJsonSafe(`/api/drive?token=${encodeURIComponent(token)}&q=${encodeURIComponent(driveSearchQuery)}&starred=${activeDriveFilter==="starred"?"1":"0"}&recent=${activeDriveFilter==="recent"?"1":"0"}`);
     renderDriveFiles(data.files||[]);
   } catch(err) {
-    driveFilesList.innerHTML=`<li>Could not load Drive files: ${err.message}</li>`;
-    if (err.message.toLowerCase().includes("auth")) showReloginPrompt(driveFilesList);
+    driveFilesList.innerHTML=`<li>Could not load Drive files: ${friendlyError(err.message)}</li>`;
+    showReloginPrompt(driveFilesList);
   } finally { setLoader(driveLoader,false); }
 }
 
