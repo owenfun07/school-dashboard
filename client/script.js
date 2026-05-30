@@ -132,6 +132,7 @@ function applyAllPrefs() {
   if (userPrefs.cardOrder) applyCardOrder(userPrefs.cardOrder);
   applyCardCustom();
 }
+function applyCardOrder(order) {
   const grid = document.getElementById("dashboard-grid");
   if (!grid) return;
   const cards = Array.from(grid.querySelectorAll(".card[data-card]"));
@@ -139,12 +140,6 @@ function applyAllPrefs() {
   order.forEach((id, i) => orderMap[id] = i);
   cards.sort((a, b) => (orderMap[a.dataset.card] ?? 99) - (orderMap[b.dataset.card] ?? 99));
   cards.forEach(c => grid.appendChild(c));
-}
-
-function applyAllPrefs() {
-  applyTheme(userPrefs.theme || "default");
-  if (userPrefs.cardOrder) applyCardOrder(userPrefs.cardOrder);
-  applyCardCustom();
 }
 
 // =====================================================================
