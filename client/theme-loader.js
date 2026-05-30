@@ -101,7 +101,12 @@
     var allKeys = new Set();
     Object.values(THEME_VARS).forEach(function(t) { Object.keys(t).forEach(function(k) { allKeys.add(k); }); });
     allKeys.forEach(function(k) { root.style.removeProperty(k); });
-    // Apply new
+    // Apply theme vars
     Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
+    // Apply custom background override — set last so it always wins over the theme
+    if (prefs.customBg) {
+      root.style.setProperty("--dash-bg", prefs.customBg);
+      root.style.setProperty("--page-bg", prefs.customBg);
+    }
   } catch(e) {}
 })();
