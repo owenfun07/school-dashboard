@@ -1,19 +1,43 @@
 /**
  * sidebar.js
- * Defines all nav links in one place and injects the sidebar into every page.
- * To add or rename a nav item, edit NAV_LINKS below — that's it.
- * Load this script in <body> on every page (before page-specific scripts).
+ * Single source of truth for navigation.
+ *
+ * NAV structure supports three item types:
+ *   { type: "link",     label, href, size }   — plain link; size: "large"|"normal"
+ *   { type: "category", label, href, items }  — expandable group; label links to href,
+ *                                               chevron toggles the dropdown
+ *
+ * To add a page: add an entry here. Nothing else needs to change.
  */
 
-const NAV_LINKS = [
-  { label: "Dashboard",          href: "/dashboard" },
-  { label: "Full Schedule",      href: "/full-schedule" },
-  { label: "Source Citation",    href: "/placeholder-page-1" },
-  { label: "Placeholder Page 2", href: "/placeholder-page-2" },
+const NAV = [
+  {
+    type:  "link",
+    label: "Dashboard",
+    href:  "/dashboard",
+    size:  "large",
+  },
+  {
+    type:  "link",
+    label: "Full Schedule",
+    href:  "/full-schedule",
+    size:  "normal",
+  },
+  {
+    type:  "category",
+    label: "Tools",
+    href:  "/tools",
+    items: [
+      { label: "Source Citation", href: "/placeholder-page-1" },
+      { label: "Placeholder Page 2", href: "/placeholder-page-2" },
+    ],
+  },
 ];
 
 (function () {
-  // ── 1. Hamburger toggle button ──────────────────────────────────────
+  const currentPath = window.location.pathname;
+
+  // ── 1. Hamburger button ─────────────────────────────────────────────
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "menu-toggle";
   toggleBtn.className = "menu-toggle";
@@ -21,7 +45,7 @@ const NAV_LINKS = [
   toggleBtn.textContent = "☰";
   document.body.prepend(toggleBtn);
 
-  // ── 2. Sidebar <aside> ───────────────────────────────────────────────
+  // ── 2. Sidebar <aside> ──────────────────────────────────────────────
   const aside = document.createElement("aside");
   aside.id = "side-menu";
   aside.className = "side-menu";
@@ -37,33 +61,85 @@ const NAV_LINKS = [
   heading.textContent = "Menu";
   aside.appendChild(heading);
 
-  // Highlight the current page
-  const currentPath = window.location.pathname;
+  // ── 3. Build nav items ──────────────────────────────────────────────
+  NAV.forEach(function (item) {
+    if (item.type === "link") {
+      const a = document.createElement("a");
+      a.href = item.href;
+      a.textContent = item.label;
+      a.className = "sidebar-link" + (item.size === "large" ? " sidebar-link-large" : "");
+      if (currentPath === item.href) a.classList.add("sidebar-active");
+      aside.appendChild(a);
 
-  NAV_LINKS.forEach(function (item) {
-    const a = document.createElement("a");
-    a.href = item.href;
-    a.textContent = item.label;
-    if (currentPath === item.href || currentPath.startsWith(item.href + "?")) {
-      a.className = "sidebar-active";
+    } else if (item.type === "category") {
+
+      // Wrapper row: [label link] [chevron toggle]
+      const row = document.createElement("div");
+      row.className = "sidebar-category-row";
+
+      const labelLink = document.createElement("a");
+      labelLink.href = item.href;
+      labelLink.textContent = item.label;
+      labelLink.className = "sidebar-category-label";
+      // Mark active if we're on the category page OR any child page
+      const childActive = item.items.some(function (c) { return currentPath === c.href; });
+      if (currentPath === item.href || childActive) {
+        labelLink.classList.add("sidebar-active");
+      }
+
+      const chevron = document.createElement("button");
+      chevron.className = "sidebar-chevron";
+      chevron.setAttribute("aria-label", "Toggle " + item.label);
+      chevron.setAttribute("aria-expanded", "false");
+      chevron.innerHTML = "&#9656;"; // ▶ right-pointing triangle
+
+      row.appendChild(labelLink);
+      row.appendChild(chevron);
+      aside.appendChild(row);
+
+      // Dropdown list
+      const dropdown = document.createElement("div");
+      dropdown.className = "sidebar-dropdown";
+      // Auto-expand if a child is the current page
+      if (childActive) {
+        dropdown.classList.add("open");
+        chevron.classList.add("open");
+        chevron.setAttribute("aria-expanded", "true");
+      }
+
+      item.items.forEach(function (child) {
+        const a = document.createElement("a");
+        a.href = child.href;
+        a.textContent = child.label;
+        a.className = "sidebar-dropdown-link";
+        if (currentPath === child.href) a.classList.add("sidebar-active");
+        dropdown.appendChild(a);
+      });
+
+      aside.appendChild(dropdown);
+
+      // Toggle on chevron click
+      chevron.addEventListener("click", function () {
+        const isOpen = dropdown.classList.toggle("open");
+        chevron.classList.toggle("open", isOpen);
+        chevron.setAttribute("aria-expanded", String(isOpen));
+      });
     }
-    aside.appendChild(a);
   });
 
   document.body.insertBefore(aside, toggleBtn.nextSibling);
 
-  // ── 3. Overlay ───────────────────────────────────────────────────────
+  // ── 4. Overlay ──────────────────────────────────────────────────────
   const overlay = document.createElement("div");
   overlay.id = "menu-overlay";
   overlay.className = "menu-overlay";
   document.body.insertBefore(overlay, aside.nextSibling);
 
-  // ── 4. Open / close logic ────────────────────────────────────────────
+  // ── 5. Open / close ─────────────────────────────────────────────────
   function openMenu() {
     aside.classList.add("open");
     overlay.classList.add("open");
   }
-
   function closeMenu() {
     aside.classList.remove("open");
     overlay.classList.remove("open");
@@ -72,7 +148,6 @@ const NAV_LINKS = [
   toggleBtn.addEventListener("click", openMenu);
   closeBtn.addEventListener("click", closeMenu);
   overlay.addEventListener("click", closeMenu);
-
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeMenu();
   });
