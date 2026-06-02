@@ -11,7 +11,6 @@
 </head>
 <body>
   <a href="/about" class="help-btn">?</a>
-
   <div class="container login-container">
     <h1 class="main-title">Welcome to Your Home for Classroom Resources</h1>
     <a href="/auth/google" class="google-btn" id="google-signin-btn">
@@ -19,36 +18,27 @@
       <span>Sign in with Google</span>
     </a>
   </div>
-
   <div class="footer">
     <a href="/privacy">Privacy Policy</a>
     <span>•</span>
     <a href="/terms">Terms of Service</a>
   </div>
-
   <script>
     const googleButton = document.getElementById("google-signin-btn");
     const googleButtonText = googleButton.querySelector("span");
     if (localStorage.getItem("access_token")) window.location.href = "/dashboard";
-
-    function setAuthLoading(isLoading) {
-      googleButton.classList.toggle("is-loading", isLoading);
-      googleButtonText.textContent = isLoading ? "Loading..." : "Sign in with Google";
-    }
-
-    googleButton.addEventListener("click", function (e) {
+    function setAuthLoading(isLoading) { googleButton.classList.toggle("is-loading",isLoading); googleButtonText.textContent=isLoading?"Loading...":"Sign in with Google"; }
+    googleButton.addEventListener("click", function(e) {
       e.preventDefault(); setAuthLoading(true);
-      const pw=500, ph=650;
-      const popup = window.open("/auth/google?popup=1","google-auth-popup",`width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`);
+      const pw=500,ph=650;
+      const popup=window.open("/auth/google?popup=1","google-auth-popup",`width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`);
       if (!popup) { window.location.href="/auth/google"; return; }
-      const check = window.setInterval(() => { if(popup.closed){clearInterval(check);setAuthLoading(false);} }, 500);
+      const check=window.setInterval(()=>{ if(popup.closed){clearInterval(check);setAuthLoading(false);} },500);
     });
-
-    window.addEventListener("message", function (e) {
+    window.addEventListener("message", function(e) {
       if (e.origin!==window.location.origin) return;
       if (!e.data||e.data.type!=="google-auth-success"||!e.data.token) return;
-      localStorage.setItem("access_token", e.data.token);
-      window.location.href = "/dashboard";
+      localStorage.setItem("access_token",e.data.token); window.location.href="/dashboard";
     });
   </script>
 </body>
