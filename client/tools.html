@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TJ2NDQJZKN"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-TJ2NDQJZKN');</script>
+  <title>Tools</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .tools-page {
+      padding: 40px;
+      min-height: 100vh;
+      background: var(--page-bg);
+    }
+
+    .tools-header {
+      margin-bottom: 32px;
+    }
+
+    .tools-header h1 {
+      margin: 0 0 6px;
+      color: var(--text-primary);
+      font-size: 28px;
+    }
+
+    .tools-header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .tool-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+      transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tool-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--tool-accent, #3b82f6);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .tool-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: var(--tool-accent, #3b82f6);
+    }
+
+    .tool-card:hover::before {
+      opacity: 1;
+    }
+
+    .tool-card-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .tool-card-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .tool-card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin: 0;
+      flex: 1;
+    }
+
+    .tool-card-arrow {
+      font-size: 18px;
+      color: var(--tool-accent, #3b82f6);
+      align-self: flex-end;
+      opacity: 0;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .tool-card:hover .tool-card-arrow {
+      opacity: 1;
+      transform: translateX(3px);
+    }
+  </style>
+</head>
+<body>
+  <div class="tools-page">
+    <div class="tools-header">
+      <h1>🛠 Tools</h1>
+      <p>All of your study tools in one place.</p>
+    </div>
+
+    <div class="tools-grid" id="tools-grid">
+      <!-- Populated by JS so adding a tool only means editing one array -->
+    </div>
+  </div>
+
+  <script src="sidebar.js"></script>
+  <script>
+    /**
+     * TOOLS REGISTRY
+     * To add a new tool, just add an entry here.
+     * icon  — emoji shown on the card
+     * name  — card title
+     * desc  — one or two sentences describing what it does
+     * href  — where it links
+     * accent — accent colour for the top border and arrow (optional, defaults to blue)
+     */
+    const TOOLS = [
+      {
+        icon:   "📝",
+        name:   "Source Citation",
+        desc:   "Generate properly formatted MLA, APA, and Chicago citations for websites. Paste a URL to auto-fill metadata, build a list, and export to TXT or DOCX.",
+        href:   "/placeholder-page-1",
+        accent: "#2563eb",
+      },
+      // Add more tools here as you build them
+    ];
+
+    const grid = document.getElementById("tools-grid");
+
+    TOOLS.forEach(function (tool) {
+      const a = document.createElement("a");
+      a.className = "tool-card";
+      a.href = tool.href;
+      if (tool.accent) a.style.setProperty("--tool-accent", tool.accent);
+
+      a.innerHTML = `
+        <div class="tool-card-icon">${tool.icon}</div>
+        <div class="tool-card-name">${tool.name}</div>
+        <div class="tool-card-desc">${tool.desc}</div>
+        <div class="tool-card-arrow">→</div>
+      `;
+
+      grid.appendChild(a);
+    });
+  </script>
+</body>
+</html>
