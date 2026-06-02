@@ -10,34 +10,17 @@
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
-
-<button id="menu-toggle" class="menu-toggle">☰</button>
-
-<aside id="side-menu" class="side-menu">
-  <button id="menu-close" class="menu-close">×</button>
-  <h3>Menu</h3>
-  <a href="/dashboard">Dashboard</a>
-  <a href="/full-schedule">Full Schedule</a>
-  <a href="/placeholder-page-1">Source Citation</a>
-  <a href="/placeholder-page-2">Placeholder Page 2</a>
-</aside>
-
-<div id="menu-overlay" class="menu-overlay"></div>
-
 <div class="dashboard">
   <div class="card">
     <h1>Source Citation</h1>
-
     <div class="top-tools url-row">
       <input id="urlInput" placeholder="Paste URL to auto-fill metadata">
       <button id="generateBtn" class="primary-btn">Generate Metadata</button>
     </div>
-
     <div id="metaLoading" class="loading hidden">
       <div class="spinner"></div>
       <span>Fetching metadata...</span>
     </div>
-
     <div class="form-grid">
       <input id="title" placeholder="Title">
       <input id="author" placeholder="Author">
@@ -56,7 +39,6 @@
       </div>
     </div>
   </div>
-
   <div class="card">
     <div class="toolbar">
       <input id="search" placeholder="Search citations">
@@ -71,16 +53,13 @@
       <button id="exportTxt">Export TXT</button>
       <button id="exportDocx">Export DOCX</button>
     </div>
-
     <h3>Sources: <span id="citationCount">0</span></h3>
     <div id="citationList"></div>
   </div>
 </div>
-
 <script>
 let citations = JSON.parse(localStorage.getItem("citations") || "[]");
 function saveData() { localStorage.setItem("citations", JSON.stringify(citations)); }
-
 function formatCitation(source) {
   switch (source.style) {
     case "apa":     return `${source.author}. (${source.publishDate || "n.d."}). ${source.title}. ${source.publisher}. ${source.url}`;
@@ -88,20 +67,13 @@ function formatCitation(source) {
     default:        return `${source.author}. "${source.title}." ${source.publisher}, ${source.publishDate}, ${source.url}. Accessed ${source.accessDate}.`;
   }
 }
-
-function clearCitationForm() {
-  title.value=""; author.value=""; publisher.value=""; url.value="";
-  publishDate.value=""; accessDate.value=""; style.value="mla"; urlInput.value="";
-}
-
+function clearCitationForm() { title.value=""; author.value=""; publisher.value=""; url.value=""; publishDate.value=""; accessDate.value=""; style.value="mla"; urlInput.value=""; }
 function render() {
   const search = document.getElementById("search").value.toLowerCase();
-  const list = document.getElementById("citationList");
-  list.innerHTML = "";
+  const list = document.getElementById("citationList"); list.innerHTML = "";
   const filtered = citations.filter(c => JSON.stringify(c).toLowerCase().includes(search));
   filtered.forEach(source => {
-    const item = document.createElement("div");
-    item.className = "citation-item";
+    const item = document.createElement("div"); item.className = "citation-item";
     item.innerHTML = `<input type="checkbox" class="citationCheck"><div class="citation-content"><div class="citation-text">${formatCitation(source)}</div></div><button class="editBtn">Edit</button><button class="deleteBtn">Delete</button>`;
     item.querySelector(".deleteBtn").onclick = () => { citations = citations.filter(c => c.id !== source.id); saveData(); render(); };
     item.querySelector(".editBtn").onclick = () => {
@@ -113,48 +85,24 @@ function render() {
   });
   document.getElementById("citationCount").textContent = filtered.length;
 }
-
-document.getElementById("addSource").onclick = () => {
-  citations.push({ id: Date.now(), title: title.value, author: author.value, publisher: publisher.value, url: url.value, publishDate: publishDate.value, accessDate: accessDate.value, style: style.value });
-  saveData(); render(); clearCitationForm();
-};
+document.getElementById("addSource").onclick = () => { citations.push({ id:Date.now(), title:title.value, author:author.value, publisher:publisher.value, url:url.value, publishDate:publishDate.value, accessDate:accessDate.value, style:style.value }); saveData(); render(); clearCitationForm(); };
 document.getElementById("search").oninput = render;
 document.getElementById("clearForm").onclick = clearCitationForm;
 document.getElementById("globalStyle").onchange = () => { const s=globalStyle.value; citations.forEach(c=>{c.style=s;}); saveData(); render(); };
 document.getElementById("copyAll").onclick = async () => { await navigator.clipboard.writeText(citations.map(formatCitation).join("\n\n")); alert("Copied all citations"); };
-document.getElementById("copySelected").onclick = async () => {
-  const checks = document.querySelectorAll(".citationCheck"), output = [];
-  checks.forEach((box,i) => { if(box.checked) output.push(formatCitation(citations[i])); });
-  await navigator.clipboard.writeText(output.join("\n\n")); alert("Copied selected");
-};
-document.getElementById("exportBib").onclick = () => {
-  let text=""; citations.forEach(c=>{text+=`\n@misc{${c.id},\ntitle={${c.title}},\nauthor={${c.author}},\npublisher={${c.publisher}},\nurl={${c.url}}\n}\n`;}); downloadFile(text,"citations.bib","text/plain");
-};
+document.getElementById("copySelected").onclick = async () => { const checks=document.querySelectorAll(".citationCheck"),output=[]; checks.forEach((box,i)=>{ if(box.checked) output.push(formatCitation(citations[i])); }); await navigator.clipboard.writeText(output.join("\n\n")); alert("Copied selected"); };
+document.getElementById("exportBib").onclick = () => { let text=""; citations.forEach(c=>{text+=`\n@misc{${c.id},\ntitle={${c.title}},\nauthor={${c.author}},\npublisher={${c.publisher}},\nurl={${c.url}}\n}\n`;}); downloadFile(text,"citations.bib","text/plain"); };
 document.getElementById("exportTxt").onclick = () => downloadFile(citations.map(formatCitation).join("\n\n"),"citations.txt","text/plain");
-document.getElementById("exportDocx").onclick = async () => {
-  const paragraphs = citations.map(c => new docx.Paragraph(formatCitation(c)));
-  const doc = new docx.Document({ sections: [{ children: paragraphs }] });
-  const blob = await docx.Packer.toBlob(doc); saveAs(blob,"citations.docx");
-};
-function downloadFile(content,filename,type) {
-  const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
-}
+document.getElementById("exportDocx").onclick = async () => { const paragraphs=citations.map(c=>new docx.Paragraph(formatCitation(c))); const doc=new docx.Document({sections:[{children:paragraphs}]}); const blob=await docx.Packer.toBlob(doc); saveAs(blob,"citations.docx"); };
+function downloadFile(content,filename,type) { const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
 document.getElementById("generateBtn").onclick = async () => {
-  const target = urlInput.value.trim(); if(!target) return;
-  const loading = document.getElementById("metaLoading"); loading.classList.remove("hidden");
-  try {
-    const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`);
-    const html = await response.text();
-    const parser = new DOMParser(), doc = parser.parseFromString(html,"text/html");
-    title.value = doc.title || ""; url.value = target;
-    const authorMeta = doc.querySelector('meta[name="author"]');
-    if (authorMeta) author.value = authorMeta.content;
-  } catch { alert("Unable to fetch metadata."); } finally { loading.classList.add("hidden"); }
+  const target=urlInput.value.trim(); if(!target) return;
+  const loading=document.getElementById("metaLoading"); loading.classList.remove("hidden");
+  try { const response=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`); const html=await response.text(); const parser=new DOMParser(),doc=parser.parseFromString(html,"text/html"); title.value=doc.title||""; url.value=target; const authorMeta=doc.querySelector('meta[name="author"]'); if(authorMeta) author.value=authorMeta.content; }
+  catch { alert("Unable to fetch metadata."); } finally { loading.classList.add("hidden"); }
 };
 render();
 </script>
-
-<script src="full-schedule.js"></script>
+<script src="sidebar.js"></script>
 </body>
 </html>
