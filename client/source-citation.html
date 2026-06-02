@@ -7,30 +7,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <button id="menu-toggle" class="menu-toggle" aria-label="Open menu">☰</button>
-
-  <aside id="side-menu" class="side-menu">
-    <button id="menu-close" class="menu-close" aria-label="Close menu">×</button>
-    <h3>Menu</h3>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/full-schedule">Full Schedule</a>
-    <button id="tools-toggle" class="tab-btn" style="margin:4px 0;width:100%;text-align:left;" aria-expanded="true">Tools ▴</button>
-    <div id="tools-dropdown">
-      <a href="/source-citation">Source Citation Tool</a>
-    </div>
-  </aside>
-
-  <div id="menu-overlay" class="menu-overlay"></div>
-
   <div class="dashboard">
     <h1>Source Citation Tool</h1>
-    <div class="card citation-card">
+    <div class="card">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <input id="citation-author" placeholder="Author (Last, First)">
         <input id="citation-title" placeholder="Page or article title">
         <input id="citation-site" placeholder="Website name">
         <input id="citation-url" placeholder="https://example.com/page">
-        <input id="citation-date" type="date" placeholder="Publication date">
+        <input id="citation-date" type="date">
       </div>
       <div class="assignment-tabs">
         <button id="citation-mla" class="tab-btn active">MLA</button>
@@ -44,7 +29,7 @@
       <ul id="citation-history"></ul>
     </div>
   </div>
-
+  <script src="sidebar.js"></script>
   <script src="source-citation.js"></script>
 </body>
 </html>
