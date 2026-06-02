@@ -175,7 +175,11 @@ function setupSettings() {
 
   logoutBtn.addEventListener("click", () => { localStorage.removeItem("access_token"); window.location.href = "/"; });
 
-  editLayoutBtn && editLayoutBtn.addEventListener("click", () => { close(); enterEditMode(); });
+  editLayoutBtn && editLayoutBtn.addEventListener("click", () => {
+    close();
+    // Small delay so the panel finishes closing before edit mode bar appears
+    setTimeout(enterEditMode, 50);
+  });
 
   resetLayoutBtn && resetLayoutBtn.addEventListener("click", () => {
     resetLayoutOnly();
@@ -1010,14 +1014,6 @@ function setupRefreshButtons() {
   if (cr) cr.addEventListener("click",()=>loadCalendar(true));
 }
 
-function setupSidebar() {
-  const tog=document.getElementById("menu-toggle"),menu=document.getElementById("side-menu"),
-        cls=document.getElementById("menu-close"),ov=document.getElementById("menu-overlay");
-  if (!tog||!menu||!cls||!ov) return;
-  const open=()=>{menu.classList.add("open");ov.classList.add("open");};
-  const close=()=>{menu.classList.remove("open");ov.classList.remove("open");};
-  tog.addEventListener("click",open); cls.addEventListener("click",close); ov.addEventListener("click",close);
-}
 
 async function loadData() {
   if (!classesList||!assignmentsList||!groupsContainer) return;
@@ -1047,7 +1043,6 @@ document.addEventListener("DOMContentLoaded", function () {
 // BOOT
 // =====================================================================
 setupReloginListener();
-setupSidebar();
 setupSettings();
 setupNotes();
 applyAllPrefs();
