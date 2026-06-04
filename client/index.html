@@ -11,34 +11,103 @@
 </head>
 <body>
   <a href="/about" class="help-btn">?</a>
+
   <div class="container login-container">
     <h1 class="main-title">Welcome to Your Home for Classroom Resources</h1>
+
     <a href="/auth/google" class="google-btn" id="google-signin-btn">
       <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
       <span>Sign in with Google</span>
     </a>
+
+    <button class="demo-link" id="demo-link-btn">Can't log in / don't want to?</button>
   </div>
+
+  <!-- Demo modal -->
+  <div id="demo-modal" class="login-modal hidden">
+    <div class="login-modal-card">
+      <h2 class="login-modal-title">No problem!</h2>
+      <p class="login-modal-body">
+        If you can't log in or just don't want to right now, that's completely fine!
+        You can still use all of our helpful study tools without an account.
+      </p>
+      <p class="login-modal-body" style="font-size:13px;color:var(--text-muted);">
+        Note: the Dashboard and Full Schedule require a Google account to load your data.
+      </p>
+      <div class="login-modal-actions">
+        <button id="demo-go-btn" class="google-btn" style="justify-content:center;">Take me there →</button>
+        <button id="demo-cancel-btn" class="demo-modal-cancel">Go back</button>
+      </div>
+    </div>
+  </div>
+  <div id="demo-modal-overlay" class="login-modal-overlay hidden"></div>
+
   <div class="footer">
     <a href="/privacy">Privacy Policy</a>
     <span>•</span>
     <a href="/terms">Terms of Service</a>
   </div>
+
   <script>
-    const googleButton = document.getElementById("google-signin-btn");
+    const googleButton     = document.getElementById("google-signin-btn");
     const googleButtonText = googleButton.querySelector("span");
+    const demoLinkBtn      = document.getElementById("demo-link-btn");
+    const demoModal        = document.getElementById("demo-modal");
+    const demoModalOverlay = document.getElementById("demo-modal-overlay");
+    const demoGoBtn        = document.getElementById("demo-go-btn");
+    const demoCancelBtn    = document.getElementById("demo-cancel-btn");
+
+    // If already logged in, skip to dashboard
     if (localStorage.getItem("access_token")) window.location.href = "/dashboard";
-    function setAuthLoading(isLoading) { googleButton.classList.toggle("is-loading",isLoading); googleButtonText.textContent=isLoading?"Loading...":"Sign in with Google"; }
-    googleButton.addEventListener("click", function(e) {
-      e.preventDefault(); setAuthLoading(true);
-      const pw=500,ph=650;
-      const popup=window.open("/auth/google?popup=1","google-auth-popup",`width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`);
-      if (!popup) { window.location.href="/auth/google"; return; }
-      const check=window.setInterval(()=>{ if(popup.closed){clearInterval(check);setAuthLoading(false);} },500);
+
+    // ── Auth flow ──
+    function setAuthLoading(isLoading) {
+      googleButton.classList.toggle("is-loading", isLoading);
+      googleButtonText.textContent = isLoading ? "Loading..." : "Sign in with Google";
+    }
+
+    googleButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      setAuthLoading(true);
+      const pw = 500, ph = 650;
+      const popup = window.open(
+        "/auth/google?popup=1", "google-auth-popup",
+        `width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`
+      );
+      if (!popup) { window.location.href = "/auth/google"; return; }
+      const check = window.setInterval(() => { if (popup.closed) { clearInterval(check); setAuthLoading(false); } }, 500);
     });
-    window.addEventListener("message", function(e) {
-      if (e.origin!==window.location.origin) return;
-      if (!e.data||e.data.type!=="google-auth-success"||!e.data.token) return;
-      localStorage.setItem("access_token",e.data.token); window.location.href="/dashboard";
+
+    window.addEventListener("message", function (e) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || e.data.type !== "google-auth-success" || !e.data.token) return;
+      localStorage.setItem("access_token", e.data.token);
+      localStorage.removeItem("demo_mode");
+      window.location.href = "/dashboard";
+    });
+
+    // ── Demo modal ──
+    function openDemoModal() {
+      demoModal.classList.remove("hidden");
+      demoModalOverlay.classList.remove("hidden");
+    }
+
+    function closeDemoModal() {
+      demoModal.classList.add("hidden");
+      demoModalOverlay.classList.add("hidden");
+    }
+
+    demoLinkBtn.addEventListener("click", openDemoModal);
+    demoCancelBtn.addEventListener("click", closeDemoModal);
+    demoModalOverlay.addEventListener("click", closeDemoModal);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeDemoModal();
+    });
+
+    demoGoBtn.addEventListener("click", function () {
+      localStorage.setItem("demo_mode", "1");
+      window.location.href = "/tools";
     });
   </script>
 </body>
