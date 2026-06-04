@@ -1018,7 +1018,12 @@ function setupRefreshButtons() {
 async function loadData() {
   if (!classesList||!assignmentsList||!groupsContainer) return;
   setupAssignmentTabs(); setupDriveControls(); setupRefreshButtons();
-  if (!token) { window.location.href="/"; return; }
+  if (!token) {
+    // Demo mode: tools are accessible without a token
+    if (localStorage.getItem("demo_mode") === "1") return;
+    window.location.href = "/";
+    return;
+  }
   await Promise.allSettled([loadClasses(), loadCalendar(), loadDriveFiles()]);
 }
 
