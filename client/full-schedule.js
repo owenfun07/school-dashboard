@@ -189,7 +189,7 @@ function setupMonthControls() {
   });
 }
 
-if (!token) {
+if (!token && localStorage.getItem("demo_mode") !== "1") {
   window.location.href = "/";
 } else {
   setupSidebar();
