@@ -3,32 +3,35 @@
  * Single source of truth for navigation.
  *
  * NAV structure supports three item types:
- *   { type: "link",     label, href, size }   — plain link; size: "large"|"normal"
- *   { type: "category", label, href, items }  — expandable group; label links to href,
- *                                               chevron toggles the dropdown
+ *   { type: "link",     label, href, size, requiresAuth }
+ *   { type: "category", label, href, items }
  *
- * To add a page: add an entry here. Nothing else needs to change.
+ * requiresAuth: true  — blocked in demo mode, shows a login prompt instead
+ *
+ * To add a page: edit NAV_LINKS below. Nothing else needs to change.
  */
 
 const NAV = [
   {
-    type:  "link",
-    label: "Dashboard",
-    href:  "/dashboard",
-    size:  "large",
+    type:        "link",
+    label:       "Dashboard",
+    href:        "/dashboard",
+    size:        "large",
+    requiresAuth: true,
   },
   {
-    type:  "link",
-    label: "Full Schedule",
-    href:  "/full-schedule",
-    size:  "normal",
+    type:        "link",
+    label:       "Full Schedule",
+    href:        "/full-schedule",
+    size:        "normal",
+    requiresAuth: true,
   },
   {
     type:  "category",
     label: "Tools",
     href:  "/tools",
     items: [
-      { label: "Source Citation", href: "/placeholder-page-1" },
+      { label: "Source Citation",    href: "/placeholder-page-1" },
       { label: "Placeholder Page 2", href: "/placeholder-page-2" },
     ],
   },
@@ -36,6 +39,8 @@ const NAV = [
 
 (function () {
   const currentPath = window.location.pathname;
+  const isDemo      = localStorage.getItem("demo_mode") === "1";
+  const hasAuth     = !!localStorage.getItem("access_token");
 
   // ── 1. Hamburger button ─────────────────────────────────────────────
   const toggleBtn = document.createElement("button");
@@ -61,19 +66,58 @@ const NAV = [
   heading.textContent = "Menu";
   aside.appendChild(heading);
 
+  // ── Demo mode banner ────────────────────────────────────────────────
+  if (isDemo && !hasAuth) {
+    const banner = document.createElement("div");
+    banner.className = "sidebar-demo-banner";
+    banner.innerHTML = `
+      <span>👋 You're in demo mode.</span>
+      <a href="/" class="sidebar-demo-login-link">Log in for full access →</a>
+    `;
+    aside.appendChild(banner);
+  }
+
+  // ── Auth-blocked message (hidden by default, shown on click) ────────
+  const authMsg = document.createElement("div");
+  authMsg.className = "sidebar-auth-msg hidden";
+  authMsg.innerHTML = `
+    <p>This page requires a Google account to load your data.</p>
+    <a href="/" class="sidebar-auth-login-link">Log in here →</a>
+  `;
+
   // ── 3. Build nav items ──────────────────────────────────────────────
   NAV.forEach(function (item) {
     if (item.type === "link") {
+      const blocked = isDemo && !hasAuth && item.requiresAuth;
+
       const a = document.createElement("a");
-      a.href = item.href;
       a.textContent = item.label;
       a.className = "sidebar-link" + (item.size === "large" ? " sidebar-link-large" : "");
-      if (currentPath === item.href) a.classList.add("sidebar-active");
+      if (blocked) a.classList.add("sidebar-link-locked");
+
+      if (!blocked) {
+        a.href = item.href;
+        if (currentPath === item.href) a.classList.add("sidebar-active");
+      } else {
+        a.href = "#";
+        a.setAttribute("aria-disabled", "true");
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          // Toggle the auth message directly below this link
+          const showing = !authMsg.classList.contains("hidden");
+          authMsg.classList.toggle("hidden", showing);
+          if (!showing) {
+            // Insert right after this link if not already there
+            if (authMsg.previousElementSibling !== a) {
+              a.insertAdjacentElement("afterend", authMsg);
+            }
+          }
+        });
+      }
+
       aside.appendChild(a);
 
     } else if (item.type === "category") {
-
-      // Wrapper row: [label link] [chevron toggle]
       const row = document.createElement("div");
       row.className = "sidebar-category-row";
 
@@ -81,26 +125,23 @@ const NAV = [
       labelLink.href = item.href;
       labelLink.textContent = item.label;
       labelLink.className = "sidebar-category-label";
-      // Mark active if we're on the category page OR any child page
+
       const childActive = item.items.some(function (c) { return currentPath === c.href; });
-      if (currentPath === item.href || childActive) {
-        labelLink.classList.add("sidebar-active");
-      }
+      if (currentPath === item.href || childActive) labelLink.classList.add("sidebar-active");
 
       const chevron = document.createElement("button");
       chevron.className = "sidebar-chevron";
       chevron.setAttribute("aria-label", "Toggle " + item.label);
       chevron.setAttribute("aria-expanded", "false");
-      chevron.innerHTML = "&#9656;"; // ▶ right-pointing triangle
+      chevron.innerHTML = "&#9656;";
 
       row.appendChild(labelLink);
       row.appendChild(chevron);
       aside.appendChild(row);
 
-      // Dropdown list
       const dropdown = document.createElement("div");
       dropdown.className = "sidebar-dropdown";
-      // Auto-expand if a child is the current page
+
       if (childActive) {
         dropdown.classList.add("open");
         chevron.classList.add("open");
@@ -118,7 +159,6 @@ const NAV = [
 
       aside.appendChild(dropdown);
 
-      // Toggle on chevron click
       chevron.addEventListener("click", function () {
         const isOpen = dropdown.classList.toggle("open");
         chevron.classList.toggle("open", isOpen);
@@ -126,6 +166,9 @@ const NAV = [
       });
     }
   });
+
+  // Auth message lives in the aside but gets moved next to whichever link was clicked
+  aside.appendChild(authMsg);
 
   document.body.insertBefore(aside, toggleBtn.nextSibling);
 
@@ -143,6 +186,7 @@ const NAV = [
   function closeMenu() {
     aside.classList.remove("open");
     overlay.classList.remove("open");
+    authMsg.classList.add("hidden"); // hide auth msg when sidebar closes
   }
 
   toggleBtn.addEventListener("click", openMenu);
