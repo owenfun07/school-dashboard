@@ -640,3 +640,146 @@ li:last-child { border-bottom: none; }
    SOURCE CITATION PAGE SPECIFICS
    ===================================================================== */
 .citation-form-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* =====================================================================
+   LOGIN PAGE — DEMO LINK + MODAL
+   ===================================================================== */
+
+.demo-link {
+  display: block;
+  margin-top: 18px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.15s;
+}
+.demo-link:hover { color: var(--text-secondary); }
+
+/* Modal backdrop */
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1500;
+}
+
+/* Modal card */
+.login-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1600;
+  padding: 20px;
+}
+.login-modal.hidden { display: none; }
+.login-modal-overlay.hidden { display: none; }
+
+.login-modal-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 36px 32px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-modal-title {
+  margin: 0;
+  font-size: 22px;
+  color: var(--text-primary);
+}
+
+.login-modal-body {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.login-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.demo-modal-cancel {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  text-decoration: underline;
+}
+.demo-modal-cancel:hover { color: var(--text-secondary); }
+
+/* =====================================================================
+   SIDEBAR — DEMO MODE
+   ===================================================================== */
+
+/* Demo banner inside sidebar */
+.sidebar-demo-banner {
+  background: var(--dash-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sidebar-demo-login-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 12px;
+}
+.sidebar-demo-login-link:hover { text-decoration: underline; }
+
+/* Locked nav link (auth-required in demo mode) */
+.sidebar-link-locked {
+  opacity: 0.45;
+  cursor: pointer;
+}
+.sidebar-link-locked::after {
+  content: " 🔒";
+  font-size: 11px;
+}
+
+/* Inline auth message that appears below a locked link */
+.sidebar-auth-msg {
+  background: var(--dash-bg);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid #f59e0b;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 12px;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.sidebar-auth-msg p { margin: 0 0 6px; }
+.sidebar-auth-msg.hidden { display: none; }
+
+.sidebar-auth-login-link {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 12px;
+}
+.sidebar-auth-login-link:hover { text-decoration: underline; }
