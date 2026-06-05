@@ -79,6 +79,12 @@ function applyTheme(themeKey) {
   ALL_THEME_VAR_KEYS.forEach(k => root.style.removeProperty(k));
   Object.entries(theme.vars).forEach(([k, v]) => root.style.setProperty(k, v));
 
+  // Always re-apply custom background on top of theme — it must win
+  if (userPrefs.customBg) {
+    root.style.setProperty("--dash-bg", userPrefs.customBg);
+    root.style.setProperty("--page-bg", userPrefs.customBg);
+  }
+
   // Accent left borders on dashboard cards
   const grid = document.getElementById("dashboard-grid");
   if (grid) {
@@ -124,11 +130,7 @@ function applyCardCustom() {
 }
 
 function applyAllPrefs() {
-  applyTheme(userPrefs.theme || "default");
-  if (userPrefs.customBg) {
-    document.documentElement.style.setProperty("--dash-bg", userPrefs.customBg);
-    document.documentElement.style.setProperty("--page-bg", userPrefs.customBg);
-  }
+  applyTheme(userPrefs.theme || "default"); // customBg re-applied inside applyTheme
   if (userPrefs.cardOrder) applyCardOrder(userPrefs.cardOrder);
   applyCardCustom();
 }
@@ -247,8 +249,8 @@ function renderThemeGrid() {
     picker.addEventListener("input", () => {
       userPrefs.customBg = picker.value;
       savePrefs();
-      document.documentElement.style.setProperty("--dash-bg", picker.value);
-      document.documentElement.style.setProperty("--page-bg", picker.value);
+      // applyTheme re-applies customBg at the end, so just call it
+      applyTheme(userPrefs.theme || "default");
     });
 
     const resetBg = document.createElement("button");
