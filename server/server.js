@@ -8,28 +8,16 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-
-// Serve static frontend files
 app.use(express.static(path.join(process.cwd(), "../client")));
 
-// Root route
 app.get("/", (req, res) => {
   res.sendFile(path.join(process.cwd(), "../client/index.html"));
 });
 
-// ENV VARIABLES
-const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_ID     = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI;
+const REDIRECT_URI  = process.env.REDIRECT_URI;
 
-// OAuth setup
-const oAuth2Client = new google.auth.OAuth2(
-  CLIENT_ID,
-  CLIENT_SECRET,
-  REDIRECT_URI
-);
-
-// SCOPES
 const SCOPES = [
   "https://www.googleapis.com/auth/classroom.courses.readonly",
   "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
@@ -38,260 +26,234 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive"
 ];
 
-// LOGIN ROUTE
+// ── In-memory refresh token store ──────────────────────────────────────
+// Maps access_token → refresh_token so we can silently get new access tokens
+// when they expire (Google access tokens last ~1 hour).
+const refreshTokenStore = new Map();
+
+// Build a fresh OAuth client for each request using the provided access token.
+// If the token is expired, silently refresh it and return the new one.
+async function buildAuthClient(accessToken) {
+  const client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  client.setCredentials({ access_token: accessToken });
+
+  const refreshToken = refreshTokenStore.get(accessToken);
+  if (refreshToken) {
+    client.setCredentials({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    // Hook: when googleapis silently refreshes, capture the new access token
+    client.on("tokens", (tokens) => {
+      if (tokens.access_token && tokens.refresh_token) {
+        refreshTokenStore.set(tokens.access_token, tokens.refresh_token);
+      } else if (tokens.access_token && refreshToken) {
+        refreshTokenStore.set(tokens.access_token, refreshToken);
+      }
+    });
+  }
+
+  return client;
+}
+
+// ── LOGIN ───────────────────────────────────────────────────────────────
 app.get("/auth/google", (req, res) => {
+  const client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
   const isPopup = req.query.popup === "1";
-
-  const url = oAuth2Client.generateAuthUrl({
-    access_type: "offline",
+  const url = client.generateAuthUrl({
+    access_type: "offline",   // request refresh token
+    prompt: "consent",        // always show consent so we get refresh_token every time
     scope: SCOPES,
-    state: isPopup ? "popup" : "default"
+    state: isPopup ? "popup" : "default",
   });
-
   res.redirect(url);
 });
 
-// CALLBACK ROUTE
+// ── CALLBACK ────────────────────────────────────────────────────────────
 app.get("/auth/google/callback", async (req, res) => {
   try {
-    const { code } = req.query;
+    const client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+    const { tokens } = await client.getToken(req.query.code);
 
-    const { tokens } = await oAuth2Client.getToken(code);
-    oAuth2Client.setCredentials(tokens);
+    const accessToken  = tokens.access_token;
+    const refreshToken = tokens.refresh_token;
+
+    // Store the refresh token against the access token
+    if (accessToken && refreshToken) {
+      refreshTokenStore.set(accessToken, refreshToken);
+    }
 
     const isPopupFlow = req.query.state === "popup";
 
     if (isPopupFlow) {
-      const safeToken = JSON.stringify(tokens.access_token || "");
+      const safeToken = JSON.stringify(accessToken || "");
       res.send(`<!DOCTYPE html><html><body><script>
         if (window.opener) {
           window.opener.postMessage({ type: "google-auth-success", token: ${safeToken} }, window.location.origin);
         }
         window.close();
-      </script></body></html>`);
+      <\/script></body></html>`);
       return;
     }
 
-    // Redirect to CLEAN URL
-    res.redirect(`/dashboard?token=${tokens.access_token}`);
+    res.redirect(`/dashboard?token=${accessToken}`);
   } catch (err) {
-    console.error(err);
+    console.error("Auth callback error:", err);
     res.send("Auth error");
   }
 });
 
-// ================= API ROUTES =================
-
-// CLASSROOM
+// ── CLASSROOM ───────────────────────────────────────────────────────────
 app.get("/api/classroom", async (req, res) => {
   try {
-    const token = req.query.token;
-    oAuth2Client.setCredentials({ access_token: token });
-
-    const classroom = google.classroom({ version: "v1", auth: oAuth2Client });
-    const courses = await classroom.courses.list();
-
+    const auth      = await buildAuthClient(req.query.token);
+    const classroom = google.classroom({ version: "v1", auth });
+    const courses   = await classroom.courses.list();
     res.json(courses.data);
   } catch (err) {
-    console.error(err);
-    res.send("Classroom error");
+    console.error("Classroom error:", err);
+    res.status(401).json({ error: "Invalid credentials. Please re-login." });
   }
 });
 
-
-// COURSEWORK
+// ── COURSEWORK ──────────────────────────────────────────────────────────
 app.get("/api/coursework", async (req, res) => {
   try {
-    const token = req.query.token;
-    const courseId = req.query.courseId;
+    const { token, courseId } = req.query;
+    if (!courseId) return res.status(400).json({ error: "courseId is required" });
 
-    if (!courseId) {
-      res.status(400).json({ error: "courseId is required" });
-      return;
-    }
+    const auth      = await buildAuthClient(token);
+    const classroom = google.classroom({ version: "v1", auth });
 
-    oAuth2Client.setCredentials({ access_token: token });
-
-    const classroom = google.classroom({ version: "v1", auth: oAuth2Client });
     const coursework = await classroom.courses.courseWork.list({
       courseId,
-      pageSize: 50
+      pageSize: 50,
     });
 
     const courseWorkWithState = await Promise.all(
       (coursework.data.courseWork || []).map(async work => {
         try {
-          const submissions = await classroom.courses.courseWork.studentSubmissions.list({
-            courseId,
-            courseWorkId: work.id,
-            userId: "me",
-            pageSize: 1
+          const subs = await classroom.courses.courseWork.studentSubmissions.list({
+            courseId, courseWorkId: work.id, userId: "me", pageSize: 1,
           });
-
-          const mySubmission = submissions.data.studentSubmissions?.[0];
-          return {
-            ...work,
-            mySubmissionState: mySubmission?.state || "UNKNOWN"
-          };
-        } catch (submissionErr) {
-          console.error(submissionErr);
-          return {
-            ...work,
-            mySubmissionState: "UNKNOWN"
-          };
+          return { ...work, mySubmissionState: subs.data.studentSubmissions?.[0]?.state || "UNKNOWN" };
+        } catch {
+          return { ...work, mySubmissionState: "UNKNOWN" };
         }
       })
     );
 
-    res.json({
-      ...coursework.data,
-      courseWork: courseWorkWithState
-    });
+    res.json({ ...coursework.data, courseWork: courseWorkWithState });
   } catch (err) {
-    console.error(err);
-    res.send("Coursework error");
+    console.error("Coursework error:", err);
+    res.status(401).json({ error: "Invalid credentials. Please re-login." });
   }
 });
 
-// CALENDAR
+// ── CALENDAR ────────────────────────────────────────────────────────────
 app.get("/api/calendar", async (req, res) => {
   try {
-    const token = req.query.token;
-    oAuth2Client.setCredentials({ access_token: token });
+    const auth     = await buildAuthClient(req.query.token);
+    const calendar = google.calendar({ version: "v3", auth });
 
-    const calendar = google.calendar({ version: "v3", auth: oAuth2Client });
-    const timeMin = new Date().toISOString();
-
-    const calendarListResponse = await calendar.calendarList.list({
+    const calListResp = await calendar.calendarList.list({
       minAccessRole: "reader",
-      showHidden: false
+      showHidden: false,
     });
 
-    const calendars = (calendarListResponse.data.items || []).filter(item => !item.deleted);
+    const calendars = (calListResp.data.items || []).filter(c => !c.deleted);
+    const timeMin   = new Date().toISOString();
 
     const eventResponses = await Promise.all(
-      calendars.map(async calendarItem => {
+      calendars.map(async cal => {
         try {
-          const response = await calendar.events.list({
-            calendarId: calendarItem.id,
+          const resp = await calendar.events.list({
+            calendarId: cal.id,
             maxResults: 50,
             singleEvents: true,
             orderBy: "startTime",
-            timeMin
+            timeMin,
           });
-
-          return (response.data.items || []).map(event => ({
-            ...event,
-            sourceCalendarId: calendarItem.id,
-            sourceCalendarSummary: calendarItem.summary || "Calendar"
+          return (resp.data.items || []).map(ev => ({
+            ...ev,
+            sourceCalendarId:      cal.id,
+            sourceCalendarSummary: cal.summary || "Calendar",
           }));
-        } catch (calendarErr) {
-          console.error(calendarErr);
-          return [];
-        }
+        } catch { return []; }
       })
     );
 
     const allEvents = eventResponses.flat().sort((a, b) => {
-      const startA = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
-      const startB = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
-      return startA - startB;
+      const sa = new Date(a.start?.dateTime || a.start?.date || 0).getTime();
+      const sb = new Date(b.start?.dateTime || b.start?.date || 0).getTime();
+      return sa - sb;
     });
 
-    res.json({
-      items: allEvents
-    });
+    res.json({ items: allEvents });
   } catch (err) {
-    console.error(err);
-    res.send("Calendar error");
+    console.error("Calendar error:", err);
+    res.status(401).json({ error: "Invalid credentials. Please re-login." });
   }
 });
 
-
-// DRIVE FILE SEARCH
+// ── DRIVE FILE LIST ─────────────────────────────────────────────────────
 app.get("/api/drive", async (req, res) => {
   try {
-    const token = req.query.token;
-    const query = req.query.q || "";
-    const starredOnly = req.query.starred === "1";
-    const recentOnly = req.query.recent === "1";
+    const { token, q = "", starred, recent } = req.query;
+    const auth  = await buildAuthClient(token);
+    const drive = google.drive({ version: "v3", auth });
 
-    oAuth2Client.setCredentials({ access_token: token });
-
-    const drive = google.drive({ version: "v3", auth: oAuth2Client });
-
-    const escapedQuery = String(query).replace(/'/g, "\\'");
-    const queryParts = ["trashed = false"];
-
-    if (escapedQuery) {
-      queryParts.push(`name contains '${escapedQuery}'`);
-    }
-
-    if (starredOnly) {
-      queryParts.push("starred = true");
-    }
+    const escaped = String(q).replace(/'/g, "\\'");
+    const parts   = ["trashed = false"];
+    if (escaped)          parts.push(`name contains '${escaped}'`);
+    if (starred === "1")  parts.push("starred = true");
 
     const files = await drive.files.list({
-      q: queryParts.join(" and "),
+      q:       parts.join(" and "),
       pageSize: 30,
-      fields: "files(id,name,webViewLink,thumbnailLink,starred,mimeType,viewedByMeTime,modifiedTime)",
-      orderBy: recentOnly ? "viewedByMeTime desc" : "modifiedTime desc"
+      fields:  "files(id,name,webViewLink,thumbnailLink,starred,mimeType,viewedByMeTime,modifiedTime)",
+      orderBy: recent === "1" ? "viewedByMeTime desc" : "modifiedTime desc",
     });
 
     res.json({ files: files.data.files || [] });
   } catch (err) {
-    console.error(err);
-    res.send("Drive error");
+    console.error("Drive error:", err);
+    res.status(401).json({ error: "Invalid credentials. Please re-login." });
   }
 });
 
-// DRIVE STAR TOGGLE
+// ── DRIVE STAR TOGGLE ───────────────────────────────────────────────────
 app.get("/api/drive/star", async (req, res) => {
   try {
-    const token = req.query.token;
-    const fileId = req.query.fileId;
-    const starred = req.query.starred === "1";
+    const { token, fileId, starred } = req.query;
+    if (!fileId) return res.status(400).json({ error: "fileId is required" });
 
-    if (!fileId) {
-      res.status(400).json({ error: "fileId is required" });
-      return;
-    }
-
-    oAuth2Client.setCredentials({ access_token: token });
-
-    const drive = google.drive({ version: "v3", auth: oAuth2Client });
+    const auth  = await buildAuthClient(token);
+    const drive = google.drive({ version: "v3", auth });
 
     const updated = await drive.files.update({
       fileId,
-      requestBody: { starred },
-      fields: "id,name,starred"
+      requestBody: { starred: starred === "1" },
+      fields: "id,name,starred",
     });
 
     res.json(updated.data);
   } catch (err) {
-    console.error(err);
-    res.send("Drive star error");
+    console.error("Drive star error:", err);
+    res.status(401).json({ error: "Invalid credentials. Please re-login." });
   }
 });
 
-// ================= PAGE ROUTES =================
+// ── PAGE ROUTES ─────────────────────────────────────────────────────────
+app.get("/dashboard",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/dashboard.html")));
+app.get("/about",      (req, res) => res.sendFile(path.join(process.cwd(), "../client/about.html")));
 
-// Clean URLs
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "../client/dashboard.html"));
-});
-
-app.get("/about", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "../client/about.html"));
-});
-
-// OPTIONAL: Auto-handle future pages
 app.get("/:page", (req, res) => {
-  const page = req.params.page;
-  res.sendFile(path.join(process.cwd(), `../client/${page}.html`));
+  const file = path.join(process.cwd(), `../client/${req.params.page}.html`);
+  res.sendFile(file, err => {
+    if (err) res.status(404).send("Page not found");
+  });
 });
 
-// START SERVER
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
+app.listen(3000, () => console.log("Server running on port 3000"));
