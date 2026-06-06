@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calculator</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Shell ── */
+    .calc-shell {
+      padding: 32px 40px;
+      min-height: 100vh;
+      background: var(--page-bg);
+    }
+    .calc-shell-header {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 28px;
+    }
+    .calc-back {
+      border: 1px solid var(--card-border); background: var(--card-bg);
+      border-radius: 10px; padding: 6px 14px; font-size: 13px; font-weight: 600;
+      color: var(--text-secondary); cursor: pointer; text-decoration: none;
+    }
+    .calc-back:hover { background: var(--dash-bg); }
+    .calc-shell-title {
+      font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0;
+    }
+
+    /* ── Card wrapper ── */
+    .calc-card-wrap {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      max-width: 560px;
+    }
+
+    /* ═══════════════════════════════════════
+       BASIC + SCIENTIFIC SHARED STYLES
+    ═══════════════════════════════════════ */
+    .calc-display {
+      background: var(--dash-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+      text-align: right; min-height: 80px; display: flex; flex-direction: column;
+      justify-content: flex-end; gap: 4px; overflow: hidden;
+    }
+    .calc-expr   { font-size: 13px; color: var(--text-muted); min-height: 18px; word-break: break-all; }
+    .calc-result { font-size: 36px; font-weight: 700; color: var(--text-primary); word-break: break-all; }
+
+    .calc-btns   { display: grid; gap: 8px; }
+    .calc-btn {
+      border: 1px solid var(--card-border); background: var(--card-bg);
+      border-radius: 10px; padding: 14px 8px; font-size: 16px; font-weight: 600;
+      cursor: pointer; color: var(--text-primary); transition: background 0.1s, transform 0.08s;
+    }
+    .calc-btn:hover  { background: var(--dash-bg); }
+    .calc-btn:active { transform: scale(0.95); }
+    .calc-btn-op     { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+    .calc-btn-op:hover { background: #dbeafe; }
+    .calc-btn-eq     { background: #2563eb; color: white; border-color: #2563eb; }
+    .calc-btn-eq:hover { background: #1d4ed8; }
+    .calc-btn-clear  { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+    .calc-btn-clear:hover { background: #fee2e2; }
+    .calc-btn-fn     { background: #f5f3ff; color: #7c3aed; border-color: #ddd6fe; font-size: 13px; }
+    .calc-btn-fn:hover { background: #ede9fe; }
+    .calc-btn-const  { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-size: 13px; }
+
+    /* ═══════════════════════════════════════
+       GRAPHING
+    ═══════════════════════════════════════ */
+    #graph-canvas {
+      width: 100%; border-radius: 12px; border: 1px solid var(--card-border);
+      display: block; background: var(--dash-bg);
+    }
+    .graph-controls {
+      display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .graph-input {
+      flex: 1; min-width: 200px; border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 10px 14px; font-size: 14px;
+      background: var(--dash-bg); color: var(--text-primary);
+    }
+    .graph-input:focus { outline: none; border-color: #6366f1; }
+    .graph-plot-btn {
+      border: none; background: #6366f1; color: white; border-radius: 10px;
+      padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .graph-plot-btn:hover { background: #4f46e5; }
+    .graph-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+    /* ═══════════════════════════════════════
+       GEOMETRY
+    ═══════════════════════════════════════ */
+    .geo-shape-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .geo-tab {
+      border: 1px solid var(--card-border); background: var(--card-bg);
+      border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.1s;
+    }
+    .geo-tab.active { background: #f59e0b; color: white; border-color: #f59e0b; }
+    .geo-inputs { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .geo-row { display: flex; align-items: center; gap: 10px; }
+    .geo-label { font-size: 13px; font-weight: 600; color: var(--text-muted); min-width: 80px; }
+    .geo-input {
+      flex: 1; border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 9px 12px; font-size: 14px; background: var(--dash-bg); color: var(--text-primary);
+    }
+    .geo-input:focus { outline: none; border-color: #f59e0b; }
+    .geo-calc-btn {
+      width: 100%; border: none; background: #f59e0b; color: white; border-radius: 10px;
+      padding: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 16px;
+    }
+    .geo-calc-btn:hover { background: #d97706; }
+    .geo-results {
+      background: var(--dash-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .geo-result-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px solid var(--card-border);
+    }
+    .geo-result-row:last-child { border-bottom: none; }
+    .geo-result-label { font-size: 13px; color: var(--text-muted); }
+    .geo-result-val   { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+
+    /* ═══════════════════════════════════════
+       UNIT CONVERTER
+    ═══════════════════════════════════════ */
+    .unit-cat-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .unit-tab {
+      border: 1px solid var(--card-border); background: var(--card-bg);
+      border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.1s;
+    }
+    .unit-tab.active { background: #ef4444; color: white; border-color: #ef4444; }
+    .unit-row { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    .unit-input {
+      flex: 1; min-width: 100px; border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 10px 12px; font-size: 16px; background: var(--dash-bg); color: var(--text-primary);
+    }
+    .unit-input:focus { outline: none; border-color: #ef4444; }
+    .unit-select {
+      border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 12px;
+      font-size: 14px; background: var(--card-bg); color: var(--text-primary); cursor: pointer;
+    }
+    .unit-swap {
+      border: 1px solid var(--card-border); background: var(--card-bg); border-radius: 8px;
+      padding: 10px 14px; font-size: 18px; cursor: pointer; color: var(--text-secondary);
+    }
+    .unit-swap:hover { background: var(--dash-bg); }
+    .unit-result {
+      background: var(--dash-bg); border-radius: 12px; border: 1px solid var(--card-border);
+      padding: 18px; text-align: center; font-size: 28px; font-weight: 700; color: var(--text-primary);
+    }
+    .unit-result-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 400; }
+
+    /* ═══════════════════════════════════════
+       PERCENTAGE
+    ═══════════════════════════════════════ */
+    .pct-section { margin-bottom: 24px; }
+    .pct-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+    .pct-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pct-input {
+      flex: 1; min-width: 80px; border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 9px 12px; font-size: 15px; background: var(--dash-bg); color: var(--text-primary);
+    }
+    .pct-input:focus { outline: none; border-color: #06b6d4; }
+    .pct-label { font-size: 14px; color: var(--text-muted); white-space: nowrap; }
+    .pct-btn {
+      border: none; background: #06b6d4; color: white; border-radius: 8px;
+      padding: 9px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .pct-btn:hover { background: #0891b2; }
+    .pct-answer {
+      margin-top: 8px; padding: 10px 14px; background: var(--dash-bg);
+      border: 1px solid var(--card-border); border-radius: 8px;
+      font-size: 18px; font-weight: 700; color: var(--text-primary); min-height: 42px;
+    }
+
+    /* ═══════════════════════════════════════
+       FRACTIONS
+    ═══════════════════════════════════════ */
+    .frac-op-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .frac-tab {
+      border: 1px solid var(--card-border); background: var(--card-bg);
+      border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600;
+      cursor: pointer; color: var(--text-secondary);
+    }
+    .frac-tab.active { background: #f97316; color: white; border-color: #f97316; }
+    .frac-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .frac-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .frac-input {
+      width: 70px; border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 8px 10px; font-size: 16px; text-align: center;
+      background: var(--dash-bg); color: var(--text-primary);
+    }
+    .frac-input:focus { outline: none; border-color: #f97316; }
+    .frac-line { width: 70px; height: 2px; background: var(--text-primary); border-radius: 2px; }
+    .frac-op-sym { font-size: 22px; font-weight: 700; color: var(--text-muted); }
+    .frac-calc-btn {
+      width: 100%; border: none; background: #f97316; color: white; border-radius: 10px;
+      padding: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 14px;
+    }
+    .frac-calc-btn:hover { background: #ea580c; }
+    .frac-result {
+      background: var(--dash-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 20px; text-align: center;
+      font-size: 22px; font-weight: 700; color: var(--text-primary); min-height: 60px;
+    }
+  </style>
+</head>
+<body>
+<div class="calc-shell">
+  <div class="calc-shell-header">
+    <a href="/calculators" class="calc-back">← Calculators</a>
+    <h1 class="calc-shell-title" id="calc-title">Calculator</h1>
+  </div>
+  <div id="calc-body"></div>
+</div>
+
+<script src="sidebar.js"></script>
+<script>
+// ── Route ────────────────────────────────────────────────────────────
+const type = new URLSearchParams(window.location.search).get("type") || "basic";
+const body = document.getElementById("calc-body");
+const titles = {
+  basic:"Basic Calculator", scientific:"Scientific Calculator",
+  graphing:"Graphing Calculator", geometry:"Geometry Calculator",
+  unit:"Unit Converter", percentage:"Percentage Calculator", fraction:"Fraction Calculator"
+};
+document.getElementById("calc-title").textContent = titles[type] || "Calculator";
+document.title = titles[type] || "Calculator";
+
+// ════════════════════════════════════════════════════════════════════
+// BASIC CALCULATOR
+// ════════════════════════════════════════════════════════════════════
+function renderBasic() {
+  body.innerHTML = `
+  <div class="calc-card-wrap">
+    <div class="calc-display">
+      <div class="calc-expr" id="b-expr"></div>
+      <div class="calc-result" id="b-result">0</div>
+    </div>
+    <div class="calc-btns" style="grid-template-columns:repeat(4,1fr)">
+      ${[
+        ["C","±","%","÷"],
+        ["7","8","9","×"],
+        ["4","5","6","−"],
+        ["1","2","3","+"],
+        ["0",".","⌫","="]
+      ].map(row => row.map(k => {
+        let cls = "calc-btn";
+        if (["÷","×","−","+"].includes(k)) cls += " calc-btn-op";
+        if (k === "=") cls += " calc-btn-eq";
+        if (k === "C") cls += " calc-btn-clear";
+        const span = k === "0" ? 'style="grid-column:span 2"' : "";
+        return `<button class="${cls}" ${span} onclick="bPress('${k}')">${k}</button>`;
+      }).join("")).join("")}
+    </div>
+  </div>`;
+
+  let expr = "", justEq = false;
+  const display = () => {
+    document.getElementById("b-expr").textContent = expr;
+    try {
+      const val = safeEval(expr);
+      document.getElementById("b-result").textContent = val !== null ? fmt(val) : "";
+    } catch { document.getElementById("b-result").textContent = ""; }
+  };
+
+  window.bPress = k => {
+    if (k === "C") { expr = ""; justEq = false; document.getElementById("b-result").textContent = "0"; document.getElementById("b-expr").textContent = ""; return; }
+    if (k === "⌫") { expr = expr.slice(0,-1); display(); return; }
+    if (k === "=") {
+      try {
+        const val = safeEval(expr);
+        if (val !== null) { expr = String(val); justEq = true; document.getElementById("b-expr").textContent = ""; document.getElementById("b-result").textContent = fmt(val); }
+      } catch { document.getElementById("b-result").textContent = "Error"; }
+      return;
+    }
+    if (k === "±") {
+      if (expr.startsWith("-")) expr = expr.slice(1);
+      else expr = "-" + expr;
+      display(); return;
+    }
+    if (k === "%") { try { expr = String(safeEval(expr) / 100); } catch {} display(); return; }
+    const opMap = {"÷":"/","×":"*","−":"-","+":"+"};
+    if (justEq && !opMap[k]) expr = "";
+    justEq = false;
+    expr += opMap[k] || k;
+    display();
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SCIENTIFIC CALCULATOR
+// ════════════════════════════════════════════════════════════════════
+function renderScientific() {
+  body.innerHTML = `
+  <div class="calc-card-wrap" style="max-width:640px">
+    <div class="calc-display">
+      <div class="calc-expr" id="s-expr"></div>
+      <div class="calc-result" id="s-result">0</div>
+    </div>
+    <div class="calc-btns" style="grid-template-columns:repeat(5,1fr)">
+      ${[
+        ["sin","cos","tan","π","e"],
+        ["sin⁻¹","cos⁻¹","tan⁻¹","log","ln"],
+        ["x²","x³","√","∛","^"],
+        ["(",")","%","C","⌫"],
+        ["7","8","9","÷","×"],
+        ["4","5","6","−","+"],
+        ["1","2","3",".","="],
+        ["0","EE","±","",""]
+      ].map(row => row.map(k => {
+        if (!k) return `<div></div>`;
+        let cls = "calc-btn";
+        if (["÷","×","−","+"].includes(k)) cls += " calc-btn-op";
+        if (k === "=") cls += " calc-btn-eq";
+        if (k === "C") cls += " calc-btn-clear";
+        if (["sin","cos","tan","sin⁻¹","cos⁻¹","tan⁻¹","log","ln","x²","x³","√","∛","^"].includes(k)) cls += " calc-btn-fn";
+        if (["π","e"].includes(k)) cls += " calc-btn-const";
+        return `<button class="${cls}" onclick="sPress('${k}')">${k}</button>`;
+      }).join("")).join("")}
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Angles in degrees</div>
+  </div>`;
+
+  let expr = "", justEq = false;
+  const disp = () => {
+    document.getElementById("s-expr").textContent = expr;
+    try {
+      const v = sciEval(expr);
+      document.getElementById("s-result").textContent = v !== null ? fmt(v) : "";
+    } catch { document.getElementById("s-result").textContent = ""; }
+  };
+
+  window.sPress = k => {
+    const fnMap = {
+      "sin":"Math.sin(deg2rad(","cos":"Math.cos(deg2rad(","tan":"Math.tan(deg2rad(",
+      "sin⁻¹":"rad2deg(Math.asin(","cos⁻¹":"rad2deg(Math.acos(","tan⁻¹":"rad2deg(Math.atan(",
+      "log":"Math.log10(","ln":"Math.log(","√":"Math.sqrt(","∛":"Math.cbrt(",
+      "x²":"**2","x³":"**3","^":"**","EE":"e+",
+      "π":"Math.PI","e":"Math.E","%":"/100",
+    };
+    if (k === "C") { expr = ""; justEq = false; document.getElementById("s-result").textContent="0"; document.getElementById("s-expr").textContent=""; return; }
+    if (k === "⌫") { expr = expr.slice(0,-1); disp(); return; }
+    if (k === "=") {
+      try {
+        const v = sciEval(expr);
+        if (v !== null) { expr = String(v); justEq = true; document.getElementById("s-expr").textContent=""; document.getElementById("s-result").textContent = fmt(v); }
+      } catch { document.getElementById("s-result").textContent = "Error"; }
+      return;
+    }
+    if (k === "±") { expr = expr.startsWith("-") ? expr.slice(1) : "-"+expr; disp(); return; }
+    const opMap = {"÷":"/","×":"*","−":"-","+":"+"};
+    if (justEq && ![...Object.keys(opMap)].includes(k)) expr = "";
+    justEq = false;
+    if (fnMap[k]) {
+      const needs_close = ["sin","cos","tan","sin⁻¹","cos⁻¹","tan⁻¹","log","ln","√","∛"].includes(k);
+      expr += fnMap[k];
+      if (needs_close) {} // closing paren typed manually or on =
+    } else {
+      expr += opMap[k] || k;
+    }
+    disp();
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// GRAPHING CALCULATOR
+// ════════════════════════════════════════════════════════════════════
+function renderGraphing() {
+  body.innerHTML = `
+  <div class="calc-card-wrap" style="max-width:700px">
+    <div class="graph-controls">
+      <input class="graph-input" id="g-eq" placeholder="e.g. x^2  or  Math.sin(x)  or  2*x+1" value="x*x">
+      <button class="graph-plot-btn" onclick="plotGraph()">Plot</button>
+    </div>
+    <canvas id="graph-canvas" height="400"></canvas>
+    <div class="graph-hint">Use <code>x</code> as the variable. Supports <code>Math.sin(x)</code>, <code>Math.sqrt(x)</code>, <code>x**2</code>, etc.</div>
+  </div>`;
+  plotGraph();
+}
+
+function plotGraph() {
+  const canvas = document.getElementById("graph-canvas");
+  const ctx = canvas.getContext("2d");
+  const eq = document.getElementById("g-eq").value.trim();
+  canvas.width = canvas.offsetWidth;
+  const W = canvas.width, H = canvas.height;
+  const xMin=-10, xMax=10, yMin=-10, yMax=10;
+
+  const toCanvasX = x => (x-xMin)/(xMax-xMin)*W;
+  const toCanvasY = y => H-(y-yMin)/(yMax-yMin)*H;
+
+  // Background
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--dash-bg").trim() || "#f5f7fb";
+  ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--card-border").trim() || "#e8edf5";
+  ctx.lineWidth = 1;
+  for (let x=xMin; x<=xMax; x++) { ctx.beginPath(); ctx.moveTo(toCanvasX(x),0); ctx.lineTo(toCanvasX(x),H); ctx.stroke(); }
+  for (let y=yMin; y<=yMax; y++) { ctx.beginPath(); ctx.moveTo(0,toCanvasY(y)); ctx.lineTo(W,toCanvasY(y)); ctx.stroke(); }
+
+  // Axes
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#667085";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(toCanvasX(0),0); ctx.lineTo(toCanvasX(0),H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,toCanvasY(0)); ctx.lineTo(W,toCanvasY(0)); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#667085";
+  ctx.font = "11px Arial";
+  for (let x=xMin; x<=xMax; x+=2) { if(x===0) continue; ctx.fillText(x, toCanvasX(x)-4, toCanvasY(0)+14); }
+  for (let y=yMin; y<=yMax; y+=2) { if(y===0) continue; ctx.fillText(y, toCanvasX(0)+4, toCanvasY(y)+4); }
+
+  // Plot
+  try {
+    const fn = new Function("x","Math","return "+eq.replace(/\^/g,"**"));
+    ctx.strokeStyle = "#6366f1";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    let started = false;
+    for (let px=0; px<=W; px++) {
+      const x = xMin + (px/W)*(xMax-xMin);
+      const y = fn(x, Math);
+      if (typeof y !== "number" || !isFinite(y)) { started=false; continue; }
+      if (!started) { ctx.moveTo(px, toCanvasY(y)); started=true; }
+      else ctx.lineTo(px, toCanvasY(y));
+    }
+    ctx.stroke();
+  } catch(e) {
+    ctx.fillStyle = "#dc2626";
+    ctx.font = "14px Arial";
+    ctx.fillText("Invalid expression: " + e.message, 12, 28);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// GEOMETRY CALCULATOR
+// ════════════════════════════════════════════════════════════════════
+const SHAPES = {
+  Circle:    { inputs:[{id:"r",label:"Radius"}], calc: v=>({ Area: fmt(Math.PI*v.r**2), Circumference: fmt(2*Math.PI*v.r) }) },
+  Square:    { inputs:[{id:"s",label:"Side"}],   calc: v=>({ Area: fmt(v.s**2), Perimeter: fmt(4*v.s) }) },
+  Rectangle: { inputs:[{id:"w",label:"Width"},{id:"h",label:"Height"}], calc: v=>({ Area: fmt(v.w*v.h), Perimeter: fmt(2*(v.w+v.h)) }) },
+  Triangle:  { inputs:[{id:"a",label:"Side a"},{id:"b",label:"Side b"},{id:"c",label:"Side c"}],
+    calc: v=>{ const s=(v.a+v.b+v.c)/2; const area=Math.sqrt(s*(s-v.a)*(s-v.b)*(s-v.c)); return { Area: fmt(area), Perimeter: fmt(v.a+v.b+v.c) }; } },
+  Trapezoid: { inputs:[{id:"a",label:"Base a"},{id:"b",label:"Base b"},{id:"h",label:"Height"}], calc: v=>({ Area: fmt(0.5*(v.a+v.b)*v.h), Perimeter: "Enter all sides" }) },
+  Sphere:    { inputs:[{id:"r",label:"Radius"}], calc: v=>({ "Surface Area": fmt(4*Math.PI*v.r**2), Volume: fmt((4/3)*Math.PI*v.r**3) }) },
+  Cylinder:  { inputs:[{id:"r",label:"Radius"},{id:"h",label:"Height"}], calc: v=>({ "Surface Area": fmt(2*Math.PI*v.r*(v.r+v.h)), Volume: fmt(Math.PI*v.r**2*v.h) }) },
+  Cube:      { inputs:[{id:"s",label:"Side"}], calc: v=>({ "Surface Area": fmt(6*v.s**2), Volume: fmt(v.s**3) }) },
+  Cone:      { inputs:[{id:"r",label:"Radius"},{id:"h",label:"Height"}],
+    calc: v=>{ const l=Math.sqrt(v.r**2+v.h**2); return { "Surface Area": fmt(Math.PI*v.r*(v.r+l)), Volume: fmt((1/3)*Math.PI*v.r**2*v.h) }; } },
+};
+
+function renderGeometry() {
+  body.innerHTML = `
+  <div class="calc-card-wrap" style="max-width:600px">
+    <div class="geo-shape-tabs" id="geo-tabs"></div>
+    <div id="geo-inputs" class="geo-inputs"></div>
+    <button class="geo-calc-btn" onclick="calcGeo()">Calculate</button>
+    <div class="geo-results" id="geo-results" style="display:none"></div>
+  </div>`;
+
+  let activeShape = "Circle";
+  const tabs = document.getElementById("geo-tabs");
+  Object.keys(SHAPES).forEach(name => {
+    const btn = document.createElement("button");
+    btn.className = "geo-tab" + (name===activeShape?" active":"");
+    btn.textContent = name;
+    btn.onclick = () => { activeShape=name; tabs.querySelectorAll(".geo-tab").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); buildInputs(); };
+    tabs.appendChild(btn);
+  });
+
+  function buildInputs() {
+    const inp = document.getElementById("geo-inputs");
+    inp.innerHTML = SHAPES[activeShape].inputs.map(i=>
+      `<div class="geo-row"><span class="geo-label">${i.label}</span><input class="geo-input" id="geo-${i.id}" type="number" min="0" step="any" placeholder="0"></div>`
+    ).join("");
+    document.getElementById("geo-results").style.display = "none";
+  }
+  buildInputs();
+
+  window.calcGeo = () => {
+    const shape = SHAPES[activeShape];
+    const vals = {};
+    for (const inp of shape.inputs) {
+      const v = parseFloat(document.getElementById("geo-"+inp.id).value);
+      if (isNaN(v)||v<0) { alert("Please enter valid positive numbers."); return; }
+      vals[inp.id] = v;
+    }
+    const results = shape.calc(vals);
+    const res = document.getElementById("geo-results");
+    res.innerHTML = Object.entries(results).map(([k,v])=>
+      `<div class="geo-result-row"><span class="geo-result-label">${k}</span><span class="geo-result-val">${v}</span></div>`
+    ).join("");
+    res.style.display = "flex";
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// UNIT CONVERTER
+// ════════════════════════════════════════════════════════════════════
+const UNITS = {
+  Length: {
+    units: ["mm","cm","m","km","inch","ft","yard","mile"],
+    to_m: {mm:0.001,cm:0.01,m:1,km:1000,inch:0.0254,ft:0.3048,yard:0.9144,mile:1609.344}
+  },
+  Weight: {
+    units: ["mg","g","kg","tonne","oz","lb","stone"],
+    to_kg: {mg:1e-6,g:0.001,kg:1,tonne:1000,oz:0.0283495,lb:0.453592,stone:6.35029}
+  },
+  Temperature: { units:["°C","°F","K"], special:true },
+  Volume: {
+    units: ["ml","L","m³","tsp","tbsp","fl oz","cup","pint","quart","gallon"],
+    to_ml: {ml:1,L:1000,"m³":1e6,tsp:4.92892,tbsp:14.7868,"fl oz":29.5735,cup:236.588,pint:473.176,quart:946.353,gallon:3785.41}
+  },
+  Area: {
+    units:["mm²","cm²","m²","km²","inch²","ft²","acre","hectare"],
+    to_m2:{"mm²":1e-6,"cm²":0.0001,"m²":1,"km²":1e6,"inch²":0.00064516,"ft²":0.092903,acre:4046.86,hectare:10000}
+  },
+  Speed: {
+    units:["m/s","km/h","mph","knot","ft/s"],
+    to_ms:{"m/s":1,"km/h":1/3.6,"mph":0.44704,"knot":0.514444,"ft/s":0.3048}
+  },
+};
+
+function renderUnit() {
+  body.innerHTML = `
+  <div class="calc-card-wrap" style="max-width:600px">
+    <div class="unit-cat-tabs" id="unit-tabs"></div>
+    <div class="unit-row">
+      <input class="unit-input" id="u-from-val" type="number" value="1">
+      <select class="unit-select" id="u-from-unit"></select>
+      <button class="unit-swap" onclick="swapUnits()">⇄</button>
+      <select class="unit-select" id="u-to-unit"></select>
+    </div>
+    <div class="unit-result" id="u-result">—</div>
+  </div>`;
+
+  let activeCat = "Length";
+  const tabs = document.getElementById("unit-tabs");
+  Object.keys(UNITS).forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "unit-tab"+(cat===activeCat?" active":"");
+    btn.textContent = cat;
+    btn.onclick = () => { activeCat=cat; tabs.querySelectorAll(".unit-tab").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); buildSelects(); convert(); };
+    tabs.appendChild(btn);
+  });
+
+  function buildSelects() {
+    const units = UNITS[activeCat].units;
+    ["u-from-unit","u-to-unit"].forEach((id,i) => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = units.map((u,j)=>`<option${(i===0&&j===0)||(i===1&&j===1)?" selected":""}>${u}</option>`).join("");
+    });
+  }
+  buildSelects();
+
+  function convert() {
+    const val   = parseFloat(document.getElementById("u-from-val").value);
+    const from  = document.getElementById("u-from-unit").value;
+    const to    = document.getElementById("u-to-unit").value;
+    const cat   = UNITS[activeCat];
+    let result;
+    if (isNaN(val)) { document.getElementById("u-result").innerHTML="—"; return; }
+
+    if (activeCat === "Temperature") {
+      let c;
+      if (from==="°C") c=val;
+      else if (from==="°F") c=(val-32)*5/9;
+      else c=val-273.15;
+      if (to==="°C") result=c;
+      else if (to==="°F") result=c*9/5+32;
+      else result=c+273.15;
+    } else {
+      const key = Object.keys(cat).find(k=>k.startsWith("to_"));
+      const base = val * cat[key][from];
+      result = base / cat[key][to];
+    }
+
+    document.getElementById("u-result").innerHTML =
+      `${fmt(result)} <span class="unit-result-sub">${to}</span>`;
+  }
+
+  document.getElementById("u-from-val").addEventListener("input", convert);
+  document.getElementById("u-from-unit").addEventListener("change", convert);
+  document.getElementById("u-to-unit").addEventListener("change", convert);
+
+  window.swapUnits = () => {
+    const a = document.getElementById("u-from-unit").value;
+    const b = document.getElementById("u-to-unit").value;
+    document.getElementById("u-from-unit").value = b;
+    document.getElementById("u-to-unit").value   = a;
+    convert();
+  };
+  convert();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// PERCENTAGE CALCULATOR
+// ════════════════════════════════════════════════════════════════════
+function renderPercentage() {
+  body.innerHTML = `
+  <div class="calc-card-wrap">
+    <div class="pct-section">
+      <div class="pct-title">What is X% of Y?</div>
+      <div class="pct-row">
+        <input class="pct-input" id="p1-pct" type="number" placeholder="X">
+        <span class="pct-label">% of</span>
+        <input class="pct-input" id="p1-of" type="number" placeholder="Y">
+        <button class="pct-btn" onclick="calcPct1()">= ?</button>
+      </div>
+      <div class="pct-answer" id="p1-ans"></div>
+    </div>
+
+    <div class="pct-section">
+      <div class="pct-title">X is what % of Y?</div>
+      <div class="pct-row">
+        <input class="pct-input" id="p2-x" type="number" placeholder="X">
+        <span class="pct-label">is what % of</span>
+        <input class="pct-input" id="p2-y" type="number" placeholder="Y">
+        <button class="pct-btn" onclick="calcPct2()">= ?</button>
+      </div>
+      <div class="pct-answer" id="p2-ans"></div>
+    </div>
+
+    <div class="pct-section">
+      <div class="pct-title">Percentage change from X to Y</div>
+      <div class="pct-row">
+        <input class="pct-input" id="p3-x" type="number" placeholder="X (from)">
+        <span class="pct-label">→</span>
+        <input class="pct-input" id="p3-y" type="number" placeholder="Y (to)">
+        <button class="pct-btn" onclick="calcPct3()">= ?</button>
+      </div>
+      <div class="pct-answer" id="p3-ans"></div>
+    </div>
+
+    <div class="pct-section">
+      <div class="pct-title">Tip Calculator</div>
+      <div class="pct-row">
+        <span class="pct-label">Bill $</span>
+        <input class="pct-input" id="p4-bill" type="number" placeholder="0.00">
+        <span class="pct-label">Tip %</span>
+        <input class="pct-input" id="p4-tip" type="number" placeholder="18">
+        <button class="pct-btn" onclick="calcTip()">= ?</button>
+      </div>
+      <div class="pct-answer" id="p4-ans"></div>
+    </div>
+  </div>`;
+
+  window.calcPct1 = () => {
+    const p=parseFloat(document.getElementById("p1-pct").value), y=parseFloat(document.getElementById("p1-of").value);
+    document.getElementById("p1-ans").textContent = isNaN(p)||isNaN(y) ? "" : fmt(p/100*y);
+  };
+  window.calcPct2 = () => {
+    const x=parseFloat(document.getElementById("p2-x").value), y=parseFloat(document.getElementById("p2-y").value);
+    document.getElementById("p2-ans").textContent = isNaN(x)||isNaN(y)||y===0 ? "" : fmt(x/y*100)+"%";
+  };
+  window.calcPct3 = () => {
+    const x=parseFloat(document.getElementById("p3-x").value), y=parseFloat(document.getElementById("p3-y").value);
+    if (isNaN(x)||isNaN(y)||x===0) { document.getElementById("p3-ans").textContent=""; return; }
+    const pct=(y-x)/Math.abs(x)*100;
+    document.getElementById("p3-ans").textContent = (pct>=0?"+":"")+fmt(pct)+"%";
+  };
+  window.calcTip = () => {
+    const b=parseFloat(document.getElementById("p4-bill").value), t=parseFloat(document.getElementById("p4-tip").value)||18;
+    if (isNaN(b)) { document.getElementById("p4-ans").textContent=""; return; }
+    const tip=b*t/100;
+    document.getElementById("p4-ans").textContent = `Tip: $${fmt(tip)} · Total: $${fmt(b+tip)}`;
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// FRACTION CALCULATOR
+// ════════════════════════════════════════════════════════════════════
+function renderFraction() {
+  body.innerHTML = `
+  <div class="calc-card-wrap">
+    <div class="frac-op-tabs" id="frac-tabs"></div>
+    <div class="frac-row" id="frac-inputs">
+      <div class="frac-group">
+        <input class="frac-input" id="f-a-n" type="number" placeholder="1">
+        <div class="frac-line"></div>
+        <input class="frac-input" id="f-a-d" type="number" placeholder="2">
+      </div>
+      <div class="frac-op-sym" id="frac-op-sym">+</div>
+      <div class="frac-group">
+        <input class="frac-input" id="f-b-n" type="number" placeholder="1">
+        <div class="frac-line"></div>
+        <input class="frac-input" id="f-b-d" type="number" placeholder="3">
+      </div>
+    </div>
+    <button class="frac-calc-btn" onclick="calcFrac()" style="margin-top:16px">=</button>
+    <div class="frac-result" id="frac-result"></div>
+  </div>`;
+
+  const ops = ["Add","Subtract","Multiply","Divide","Simplify"];
+  let activeOp = "Add";
+  const tabs = document.getElementById("frac-tabs");
+  ops.forEach(op => {
+    const btn = document.createElement("button");
+    btn.className = "frac-tab"+(op===activeOp?" active":"");
+    btn.textContent = op;
+    btn.onclick = () => {
+      activeOp=op;
+      tabs.querySelectorAll(".frac-tab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      const syms = {Add:"+",Subtract:"−",Multiply:"×",Divide:"÷",Simplify:""};
+      document.getElementById("frac-op-sym").textContent = syms[op]||"";
+      // Hide second fraction for Simplify
+      document.querySelectorAll("#frac-inputs .frac-group")[1].style.display = op==="Simplify"?"none":"flex";
+      document.getElementById("frac-op-sym").style.display = op==="Simplify"?"none":"block";
+    };
+    tabs.appendChild(btn);
+  });
+
+  function gcd(a,b) { return b===0?Math.abs(a):gcd(b,a%b); }
+  function fmtFrac(n,d) {
+    if (d===0) return "Undefined";
+    const g=gcd(Math.abs(n),Math.abs(d));
+    n/=g; d/=g;
+    if (d<0){n=-n;d=-d;}
+    const whole=Math.trunc(n/d), rem=n%d;
+    if (rem===0) return String(whole);
+    if (whole!==0) return `${whole} ${Math.abs(rem)}/${d}`;
+    return `${n}/${d}`;
+  }
+
+  window.calcFrac = () => {
+    const an=parseInt(document.getElementById("f-a-n").value)||0;
+    const ad=parseInt(document.getElementById("f-a-d").value)||1;
+    const bn=parseInt(document.getElementById("f-b-n").value)||0;
+    const bd=parseInt(document.getElementById("f-b-d").value)||1;
+    let rn,rd;
+    switch(activeOp) {
+      case "Add":      rn=an*bd+bn*ad; rd=ad*bd; break;
+      case "Subtract": rn=an*bd-bn*ad; rd=ad*bd; break;
+      case "Multiply": rn=an*bn;       rd=ad*bd; break;
+      case "Divide":   rn=an*bd;       rd=ad*bn; break;
+      case "Simplify": rn=an; rd=ad; break;
+    }
+    const res = fmtFrac(rn,rd);
+    const dec = rd!==0 ? " ≈ "+fmt(rn/rd) : "";
+    document.getElementById("frac-result").innerHTML = `${res}<br><span style="font-size:14px;color:var(--text-muted);font-weight:400">${dec}</span>`;
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SHARED HELPERS
+// ════════════════════════════════════════════════════════════════════
+function safeEval(expr) {
+  if (!expr.trim()) return null;
+  const cleaned = expr.replace(/[^0-9+\-*/.() ]/g,"");
+  try { return Function('"use strict";return ('+cleaned+')')(); } catch { return null; }
+}
+
+function sciEval(expr) {
+  if (!expr.trim()) return null;
+  try {
+    const fn = new Function("Math","deg2rad","rad2deg",'"use strict";return ('+expr+')');
+    return fn(Math, x=>x*Math.PI/180, x=>x*180/Math.PI);
+  } catch { return null; }
+}
+
+function deg2rad(d) { return d*Math.PI/180; }
+function rad2deg(r) { return r*180/Math.PI; }
+
+function fmt(n) {
+  if (typeof n !== "number" || !isFinite(n)) return "Error";
+  // Round to 10 sig figs to avoid floating point noise
+  const rounded = parseFloat(n.toPrecision(10));
+  // Use exponential for very large/small
+  if (Math.abs(rounded) > 1e12 || (Math.abs(rounded) < 1e-6 && rounded !== 0)) return rounded.toExponential(4);
+  return parseFloat(rounded.toFixed(8)).toString();
+}
+
+// ── Launch ───────────────────────────────────────────────────────────
+const renderers = {
+  basic: renderBasic, scientific: renderScientific, graphing: renderGraphing,
+  geometry: renderGeometry, unit: renderUnit, percentage: renderPercentage,
+  fraction: renderFraction,
+};
+(renderers[type] || renderBasic)();
+</script>
+</body>
+</html>
