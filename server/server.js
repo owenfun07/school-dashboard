@@ -246,7 +246,10 @@ app.get("/api/drive/star", async (req, res) => {
 });
 
 // ── PAGE ROUTES ─────────────────────────────────────────────────────────
-app.get("/dashboard",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/dashboard.html")));
+app.get("/dashboard",    (req, res) => res.sendFile(path.join(process.cwd(), "../client/dashboard.html")));
+app.get("/calculators",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculators.html")));
+app.get("/calculator",   (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculator.html")));
+app.get("/tools",        (req, res) => res.sendFile(path.join(process.cwd(), "../client/tools.html")));
 app.get("/about",      (req, res) => res.sendFile(path.join(process.cwd(), "../client/about.html")));
 
 app.get("/:page", (req, res) => {
