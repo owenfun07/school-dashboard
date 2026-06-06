@@ -194,6 +194,31 @@ function setupSettings() {
 // THEME GRID
 // =====================================================================
 
+// Sync the background colour picker to whatever --dash-bg currently resolves to
+function syncBgPicker() {
+  const picker = document.querySelector(".custom-bg-section input[type=color]");
+  if (!picker) return;
+  // Read the computed value from <html> where CSS vars are applied
+  const computed = getComputedStyle(document.documentElement)
+    .getPropertyValue("--dash-bg").trim();
+  if (computed) {
+    // CSS var values may be hex or rgb — convert to hex for the color input
+    const hex = computed.startsWith("#") ? computed : cssColorToHex(computed);
+    if (hex) picker.value = hex;
+  }
+}
+
+// Convert any CSS colour string to a #rrggbb hex string
+function cssColorToHex(color) {
+  if (!color) return null;
+  if (color.startsWith("#")) return color.length === 4
+    ? "#" + color[1]+color[1]+color[2]+color[2]+color[3]+color[3]
+    : color;
+  const m = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (m) return "#" + [m[1],m[2],m[3]].map(x => parseInt(x).toString(16).padStart(2,"0")).join("");
+  return null;
+}
+
 function renderThemeGrid() {
   const grid = document.getElementById("theme-grid");
   if (!grid) return;
@@ -220,8 +245,12 @@ function renderThemeGrid() {
     swatch.appendChild(label);
     swatch.addEventListener("click", () => {
       userPrefs.theme = key;
+      // Picking a theme resets any custom background so the theme's colour wins
+      delete userPrefs.customBg;
       savePrefs();
       applyTheme(key);
+      // Sync the bg picker to the new theme's background colour
+      syncBgPicker();
     });
     grid.appendChild(swatch);
   });
@@ -244,7 +273,12 @@ function renderThemeGrid() {
     const picker = document.createElement("input");
     picker.type = "color";
     picker.className = "edit-color-picker";
-    picker.value = userPrefs.customBg || rgbToHex(getComputedStyle(document.body).backgroundColor) || "#f5f7fb";
+    // Initialise to customBg if user has set one, otherwise the current theme bg
+    const initBg = userPrefs.customBg || (function() {
+      const v = getComputedStyle(document.documentElement).getPropertyValue("--dash-bg").trim();
+      return cssColorToHex(v) || "#f5f7fb";
+    })();
+    picker.value = initBg;
 
     picker.addEventListener("input", () => {
       userPrefs.customBg = picker.value;
@@ -260,7 +294,7 @@ function renderThemeGrid() {
       delete userPrefs.customBg;
       savePrefs();
       applyTheme(userPrefs.theme || "default");
-      picker.value = rgbToHex(getComputedStyle(document.body).backgroundColor) || "#f5f7fb";
+      syncBgPicker();
     });
 
     row.appendChild(picker);
