@@ -32,7 +32,7 @@ const NAV = [
     href:  "/tools",
     items: [
       { label: "Source Citation",    href: "/placeholder-page-1" },
-      { label: "Placeholder Page 2", href: "/placeholder-page-2" },
+      { label: "Calculators",         href: "/calculators" },
     ],
   },
 ];
