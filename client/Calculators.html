@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calculators</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .calc-landing { padding: 40px; min-height: 100vh; background: var(--page-bg); }
+    .calc-header { margin-bottom: 32px; }
+    .calc-header h1 { margin: 0 0 6px; color: var(--text-primary); font-size: 28px; }
+    .calc-header p  { margin: 0; color: var(--text-muted); font-size: 15px; }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+    }
+
+    .calc-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+      transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .calc-card::before {
+      content: "";
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--calc-accent, #6366f1);
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .calc-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--calc-accent, #6366f1); }
+    .calc-card:hover::before { opacity: 1; }
+
+    .calc-icon  { font-size: 30px; line-height: 1; }
+    .calc-name  { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .calc-desc  { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0; flex: 1; }
+    .calc-arrow { font-size: 18px; color: var(--calc-accent, #6366f1); align-self: flex-end; opacity: 0; transition: opacity 0.15s, transform 0.15s; }
+    .calc-card:hover .calc-arrow { opacity: 1; transform: translateX(3px); }
+  </style>
+</head>
+<body>
+  <div class="calc-landing">
+    <div class="calc-header">
+      <h1>🔢 Calculators</h1>
+      <p>Choose a calculator to get started.</p>
+    </div>
+    <div class="calc-grid" id="calc-grid"></div>
+  </div>
+
+  <script src="sidebar.js"></script>
+  <script>
+    const CALCULATORS = [
+      { type:"basic",      icon:"➕", name:"Basic",         accent:"#3b82f6", desc:"Addition, subtraction, multiplication, division and everything in between." },
+      { type:"scientific", icon:"🔬", name:"Scientific",    accent:"#8b5cf6", desc:"Trig functions, logarithms, exponents, constants like π and e." },
+      { type:"graphing",   icon:"📈", name:"Graphing",      accent:"#10b981", desc:"Plot equations and functions on an interactive graph." },
+      { type:"geometry",   icon:"📐", name:"Geometry",      accent:"#f59e0b", desc:"Area, perimeter, circumference and volume for common shapes." },
+      { type:"unit",       icon:"⚖️",  name:"Unit Converter",accent:"#ef4444", desc:"Convert between units of length, weight, temperature, volume and more." },
+      { type:"percentage", icon:"💯", name:"Percentage",    accent:"#06b6d4", desc:"Percentage of a number, percentage change, and tip calculator." },
+      { type:"fraction",   icon:"½",  name:"Fractions",     accent:"#f97316", desc:"Simplify, add, subtract, multiply and divide fractions." },
+    ];
+
+    const grid = document.getElementById("calc-grid");
+    CALCULATORS.forEach(c => {
+      const card = document.createElement("a");
+      card.className = "calc-card";
+      card.href = `/calculator?type=${c.type}`;
+      card.style.setProperty("--calc-accent", c.accent);
+      card.innerHTML = `
+        <div class="calc-icon">${c.icon}</div>
+        <div class="calc-name">${c.name}</div>
+        <div class="calc-desc">${c.desc}</div>
+        <div class="calc-arrow">→</div>
+      `;
+      grid.appendChild(card);
+    });
+  </script>
+</body>
+</html>
