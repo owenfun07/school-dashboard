@@ -63,6 +63,13 @@
     .calc-btn-fn:hover { background: #ede9fe; }
     .calc-btn-const  { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-size: 13px; }
 
+    /* Key-press flash — triggered by keyboard input */
+    .calc-btn-flash {
+      background: #dbeafe !important;
+      transform: scale(0.93) !important;
+      transition: background 0.05s, transform 0.05s !important;
+    }
+
     /* ═══════════════════════════════════════
        GRAPHING
     ═══════════════════════════════════════ */
@@ -774,6 +781,107 @@ function fmt(n) {
   if (Math.abs(rounded) > 1e12 || (Math.abs(rounded) < 1e-6 && rounded !== 0)) return rounded.toExponential(4);
   return parseFloat(rounded.toFixed(8)).toString();
 }
+
+// ════════════════════════════════════════════════════════════════════
+// KEYBOARD SUPPORT
+// ════════════════════════════════════════════════════════════════════
+
+// Maps a KeyboardEvent to the logical key string used by bPress / sPress.
+// Returns null if the key should be ignored.
+function keyToCalc(e) {
+  // Never intercept when typing inside an input or textarea
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return null;
+
+  const k = e.key;
+
+  // Digits and decimal
+  if (/^[0-9]$/.test(k)) return k;
+  if (k === ".") return ".";
+
+  // Operators — map to the symbol bPress/sPress expect
+  if (k === "+" ) return "+";
+  if (k === "-" ) return "−";   // minus sign (not hyphen)
+  if (k === "*" ) return "×";
+  if (k === "/" ) { e.preventDefault(); return "÷"; }
+
+  // Enter / = → evaluate
+  if (k === "Enter" || k === "=") { e.preventDefault(); return "="; }
+
+  // Backspace → delete last char
+  if (k === "Backspace") { e.preventDefault(); return "⌫"; }
+
+  // Escape → clear
+  if (k === "Escape") return "C";
+
+  // Parentheses (scientific)
+  if (k === "(" ) return "(";
+  if (k === ")" ) return ")";
+
+  // Percent
+  if (k === "%") return "%";
+
+  // Power (scientific)
+  if (k === "^") return "^";
+
+  return null;
+}
+
+// Flash the on-screen button that matches a key so the user gets visual feedback
+function flashButton(k) {
+  // Find the button whose text matches k (handles both bPress and sPress layouts)
+  const displayMap = { "÷":"÷", "×":"×", "−":"−", "+":"+", "=":"=", "⌫":"⌫", "C":"C" };
+  const label = displayMap[k] || k;
+  const btns = document.querySelectorAll(".calc-btn");
+  for (const btn of btns) {
+    if (btn.textContent.trim() === label) {
+      btn.classList.add("calc-btn-flash");
+      setTimeout(() => btn.classList.remove("calc-btn-flash"), 120);
+      break;
+    }
+  }
+}
+
+document.addEventListener("keydown", function (e) {
+  // Basic calculator
+  if (type === "basic" && typeof window.bPress === "function") {
+    const k = keyToCalc(e);
+    if (k !== null) { flashButton(k); window.bPress(k); }
+    return;
+  }
+
+  // Scientific calculator
+  if (type === "scientific" && typeof window.sPress === "function") {
+    const k = keyToCalc(e);
+    if (k !== null) { flashButton(k); window.sPress(k); }
+    return;
+  }
+
+  // Graphing — Enter plots the graph
+  if (type === "graphing") {
+    const tag = document.activeElement?.tagName;
+    if (e.key === "Enter" && tag === "INPUT") {
+      e.preventDefault();
+      plotGraph();
+    }
+    return;
+  }
+
+  // Geometry, Unit, Percentage, Fraction — Enter submits the active calculator
+  if (e.key === "Enter") {
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT") {
+      e.preventDefault();
+      if (type === "geometry"   && typeof window.calcGeo  === "function") window.calcGeo();
+      if (type === "percentage") {
+        // Submit whichever section the focused input is in
+        const section = document.activeElement.closest(".pct-section");
+        if (section) section.querySelector(".pct-btn")?.click();
+      }
+      if (type === "fraction"   && typeof window.calcFrac === "function") window.calcFrac();
+    }
+  }
+});
 
 // ── Launch ───────────────────────────────────────────────────────────
 const renderers = {
