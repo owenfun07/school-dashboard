@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Assignment Tracker</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .tracker-page { padding: 32px 40px; min-height: 100vh; background: var(--page-bg); }
+    .tracker-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+    .tracker-header h1 { margin:0; color:var(--text-primary); font-size:24px; }
+    .tracker-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+    .import-btn {
+      border:1px solid #6366f1; background:#ede9fe; color:#4f46e5;
+      border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .import-btn:hover { background:#ddd6fe; }
+    .add-card-btn {
+      border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary);
+      border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .add-card-btn:hover { background:var(--dash-bg); }
+
+    .kanban { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start; }
+
+    .kanban-col { background:var(--dash-bg); border:1px solid var(--card-border); border-radius:14px; padding:14px; min-height:200px; }
+    .kanban-col-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .kanban-col-title { font-size:14px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+    .kanban-col-count { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; background:var(--card-bg); color:var(--text-muted); border:1px solid var(--card-border); }
+
+    .kanban-card {
+      background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px;
+      padding:12px; margin-bottom:10px; cursor:grab;
+      box-shadow:0 2px 6px rgba(0,0,0,0.04);
+      transition:box-shadow 0.15s, transform 0.1s;
+      position:relative;
+    }
+    .kanban-card:hover { box-shadow:0 4px 14px rgba(0,0,0,0.1); }
+    .kanban-card.dragging { opacity:0.4; cursor:grabbing; }
+    .kanban-card.drag-over { outline:2px dashed #6366f1; outline-offset:2px; }
+
+    .kanban-card-title { font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+    .kanban-card-meta  { font-size:12px; color:var(--text-muted); }
+    .kanban-card-course { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; background:#ede9fe; color:#4f46e5; display:inline-block; margin-top:6px; }
+    .kanban-card-due   { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .kanban-card-del   { position:absolute; top:8px; right:8px; border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px; opacity:0; transition:opacity 0.15s; }
+    .kanban-card:hover .kanban-card-del { opacity:1; }
+    .kanban-card-del:hover { color:#dc2626; }
+
+    .kanban-drop-zone { min-height:40px; border-radius:8px; border:2px dashed transparent; transition:border-color 0.15s, background 0.15s; }
+    .kanban-drop-zone.drag-over-col { border-color:#6366f1; background:#f5f3ff; }
+
+    /* Add form */
+    .add-form { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; padding:12px; margin-bottom:10px; display:none; flex-direction:column; gap:8px; }
+    .add-form.open { display:flex; }
+    .add-form input, .add-form select {
+      border:1px solid var(--card-border); border-radius:8px; padding:8px 10px;
+      font-size:13px; background:var(--dash-bg); color:var(--text-primary);
+    }
+    .add-form input:focus, .add-form select:focus { outline:none; border-color:#6366f1; }
+    .add-form-btns { display:flex; gap:8px; }
+    .add-form-save { flex:1; border:none; background:#6366f1; color:white; border-radius:8px; padding:8px; font-size:13px; font-weight:600; cursor:pointer; }
+    .add-form-cancel { border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; }
+
+    .status-banner { padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px; display:none; }
+    .status-banner.info { background:#ede9fe; color:#4f46e5; border:1px solid #ddd6fe; display:block; }
+    .status-banner.warn { background:#fef3c7; color:#92400e; border:1px solid #fde68a; display:block; }
+
+    @media (max-width: 700px) { .kanban { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="tracker-page">
+  <div class="tracker-header">
+    <h1>📋 Assignment Tracker</h1>
+    <div class="tracker-actions">
+      <button class="import-btn" id="import-btn">↓ Import from Classroom</button>
+      <button class="add-card-btn" id="add-btn">+ Add manually</button>
+    </div>
+  </div>
+
+  <div class="status-banner" id="status-banner"></div>
+
+  <div class="kanban" id="kanban">
+    <div class="kanban-col" id="col-todo"        data-col="todo">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title">📌 To Do <span class="kanban-col-count" id="count-todo">0</span></div>
+      </div>
+      <div class="add-form" id="add-form-todo">
+        <input id="af-title"  placeholder="Assignment title" type="text">
+        <input id="af-course" placeholder="Course (optional)" type="text">
+        <input id="af-due"    placeholder="Due date (optional)" type="date">
+        <div class="add-form-btns">
+          <button class="add-form-save"   onclick="saveManual()">Add</button>
+          <button class="add-form-cancel" onclick="closeAddForm()">Cancel</button>
+        </div>
+      </div>
+      <div class="kanban-drop-zone" id="dz-todo"></div>
+    </div>
+
+    <div class="kanban-col" id="col-inprogress" data-col="inprogress">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title">⚡ In Progress <span class="kanban-col-count" id="count-inprogress">0</span></div>
+      </div>
+      <div class="kanban-drop-zone" id="dz-inprogress"></div>
+    </div>
+
+    <div class="kanban-col" id="col-done"        data-col="done">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title">✅ Done <span class="kanban-col-count" id="count-done">0</span></div>
+      </div>
+      <div class="kanban-drop-zone" id="dz-done"></div>
+    </div>
+  </div>
+</div>
+
+<script src="sidebar.js"></script>
+<script>
+const token   = localStorage.getItem("access_token");
+const isDemo  = localStorage.getItem("demo_mode") === "1";
+const STORE_KEY = "assignment_tracker_cards";
+
+let cards = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
+let dragId = null;
+
+function saveCards() { localStorage.setItem(STORE_KEY, JSON.stringify(cards)); }
+
+function fmt(dateObj) {
+  if (!dateObj) return "";
+  if (typeof dateObj === "string") return dateObj;
+  const { year, month, day } = dateObj;
+  if (!year) return "";
+  return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+}
+
+function fmtDisplay(dateStr) {
+  if (!dateStr) return "";
+  try {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+  } catch { return dateStr; }
+}
+
+function isPast(dateStr) {
+  if (!dateStr) return false;
+  return new Date(dateStr + "T23:59:59") < new Date();
+}
+
+// ── Render ──────────────────────────────────────────────────────────
+function render() {
+  ["todo","inprogress","done"].forEach(col => {
+    const dz   = document.getElementById("dz-" + col);
+    const colCards = cards.filter(c => c.col === col);
+    // Clear only card elements, not the drop zone itself
+    dz.parentElement.querySelectorAll(".kanban-card").forEach(el => el.remove());
+
+    colCards.forEach(card => {
+      const el = document.createElement("div");
+      el.className = "kanban-card";
+      el.dataset.id = card.id;
+      el.draggable = true;
+      el.innerHTML = `
+        <button class="kanban-card-del" onclick="deleteCard('${card.id}')" title="Delete">×</button>
+        <div class="kanban-card-title">${escHtml(card.title)}</div>
+        ${card.course ? `<div class="kanban-card-course">${escHtml(card.course)}</div>` : ""}
+        ${card.due    ? `<div class="kanban-card-due ${isPast(card.due) && col!=="done" ? "style='color:#dc2626;font-weight:600'" : ""}">Due: ${fmtDisplay(card.due)}</div>` : ""}
+      `;
+      el.addEventListener("dragstart", e => { dragId = card.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; });
+      el.addEventListener("dragend",   () => el.classList.remove("dragging"));
+      // Insert before the drop zone
+      dz.insertAdjacentElement("beforebegin", el);
+    });
+
+    document.getElementById("count-" + col).textContent = colCards.length;
+  });
+}
+
+// ── Drag and drop ───────────────────────────────────────────────────
+["todo","inprogress","done"].forEach(col => {
+  const colEl = document.getElementById("col-" + col);
+  colEl.addEventListener("dragover", e => { e.preventDefault(); colEl.classList.add("drag-over-col"); });
+  colEl.addEventListener("dragleave",() => colEl.classList.remove("drag-over-col"));
+  colEl.addEventListener("drop", e => {
+    e.preventDefault();
+    colEl.classList.remove("drag-over-col");
+    if (!dragId) return;
+    const card = cards.find(c => c.id === dragId);
+    if (card) { card.col = col; saveCards(); render(); }
+    dragId = null;
+  });
+});
+
+// ── Add manual card ─────────────────────────────────────────────────
+document.getElementById("add-btn").addEventListener("click", () => {
+  const form = document.getElementById("add-form-todo");
+  form.classList.toggle("open");
+  if (form.classList.contains("open")) document.getElementById("af-title").focus();
+});
+
+function closeAddForm() { document.getElementById("add-form-todo").classList.remove("open"); }
+
+function saveManual() {
+  const title = document.getElementById("af-title").value.trim();
+  if (!title) { document.getElementById("af-title").focus(); return; }
+  cards.push({
+    id:     Date.now() + Math.random(),
+    title,
+    course: document.getElementById("af-course").value.trim(),
+    due:    document.getElementById("af-due").value || "",
+    col:    "todo",
+    source: "manual",
+  });
+  saveCards(); render(); closeAddForm();
+  document.getElementById("af-title").value = "";
+  document.getElementById("af-course").value = "";
+  document.getElementById("af-due").value = "";
+}
+
+function deleteCard(id) {
+  cards = cards.filter(c => String(c.id) !== String(id));
+  saveCards(); render();
+}
+
+// ── Import from Classroom ───────────────────────────────────────────
+document.getElementById("import-btn").addEventListener("click", importFromClassroom);
+
+async function importFromClassroom() {
+  const banner = document.getElementById("status-banner");
+  if (!token) {
+    banner.className = "status-banner warn";
+    banner.textContent = "⚠️ You need to be logged in to import from Classroom. Log in from the sidebar.";
+    return;
+  }
+
+  banner.className = "status-banner info";
+  banner.textContent = "⏳ Fetching your Classroom assignments…";
+
+  try {
+    const coursesResp = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
+    const coursesData = await coursesResp.json();
+    const courses = coursesData.courses || [];
+
+    if (!courses.length) {
+      banner.textContent = "ℹ️ No Classroom courses found.";
+      return;
+    }
+
+    let imported = 0, skipped = 0;
+    const existingTitles = new Set(cards.map(c => c.title.toLowerCase()));
+
+    for (const course of courses) {
+      const cwResp = await fetch(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(course.id)}`);
+      const cwData = await cwResp.json();
+      const works  = cwData.courseWork || [];
+
+      works.forEach(work => {
+        if (existingTitles.has(work.title.toLowerCase())) { skipped++; return; }
+
+        // Map Classroom submission state to kanban column
+        let col = "todo";
+        if (work.mySubmissionState === "TURNED_IN" || work.mySubmissionState === "RETURNED") col = "done";
+        else if (work.mySubmissionState === "CREATED" || work.mySubmissionState === "RECLAIMED_BY_STUDENT") col = "inprogress";
+
+        cards.push({
+          id:     "cl-" + work.id,
+          title:  work.title,
+          course: course.name,
+          due:    fmt(work.dueDate),
+          col,
+          source: "classroom",
+        });
+        existingTitles.add(work.title.toLowerCase());
+        imported++;
+      });
+    }
+
+    saveCards(); render();
+    banner.className = "status-banner info";
+    banner.textContent = `✓ Imported ${imported} assignment${imported!==1?"s":""}${skipped ? ` (${skipped} already existed, skipped)` : ""}.`;
+  } catch (err) {
+    banner.className = "status-banner warn";
+    banner.textContent = "⚠️ Could not import: " + err.message + " — please re-login and try again.";
+  }
+}
+
+function escHtml(s) {
+  return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+// Enter key in add form
+document.getElementById("af-title").addEventListener("keydown", e => { if (e.key==="Enter") saveManual(); });
+
+render();
+</script>
+</body>
+</html>
