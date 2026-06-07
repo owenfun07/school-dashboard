@@ -332,18 +332,7 @@ Rules:
 Respond with only valid JSON like:
 {"title":"...","author":"...","publisher":"...","publishDate":"..."}`;
 
-  try {
-    const geminiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
-        }),
-      }
-    );
+  try { const geminiResp = await fetch( `https://googleapis.com{GEMINI_API_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 256 }, }), } );
 
     // Always parse the body first so we can inspect the error details
     const geminiData = await geminiResp.json().catch(() => ({}));
