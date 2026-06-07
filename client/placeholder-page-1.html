@@ -264,7 +264,14 @@ async function callAI() {
     const data = await resp.json();
 
     if (!resp.ok || !data.success) {
-      showNotice("⚠️ AI enhancement failed: " + (data.error || "Unknown error"), "warning", false);
+      const err = data.error || "";
+      if (resp.status === 429 || err === "quota_exceeded") {
+        showNotice("✨ Couldn't polish with AI — quota has been reached for today. Try again tomorrow or fill in the missing fields manually.", "warning", true);
+      } else if (err === "ai_unavailable") {
+        showNotice("✨ AI is temporarily unavailable. You can fill in the missing fields manually.", "warning", true);
+      } else {
+        showNotice("✨ AI couldn't enhance this citation. Please fill in any missing fields manually.", "warning", true);
+      }
       return;
     }
 
