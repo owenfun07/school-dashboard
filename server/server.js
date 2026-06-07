@@ -345,27 +345,23 @@ Respond with only valid JSON like:
       }
     );
 
-    if (!geminiResp.ok) {
-      const err = await geminiResp.json().catch(() => ({}));
-      const msg = err?.error?.message || "Gemini API error " + geminiResp.status;
-      return res.status(geminiResp.status).json({ error: msg });
-    }
+    // Always parse the body first so we can inspect the error details
+    const geminiData = await geminiResp.json().catch(() => ({}));
 
-    const geminiData = await geminiResp.json();
-
-    // Handle quota / rate limit errors from Gemini
     if (!geminiResp.ok) {
-      const status = geminiResp.status;
+      const status    = geminiResp.status;
       const geminiMsg = geminiData?.error?.message || "";
+      console.error("Gemini API error", status, geminiMsg);
+
+      // 429 or any quota/exceeded message → friendly quota error
       if (status === 429 || geminiMsg.toLowerCase().includes("quota") || geminiMsg.toLowerCase().includes("exceeded")) {
         return res.status(429).json({ error: "quota_exceeded" });
       }
+      // Any other non-OK response
       return res.status(status).json({ error: "ai_unavailable" });
     }
 
-    const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    // Strip any markdown fences just in case
+    const raw   = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
 
