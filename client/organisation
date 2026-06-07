@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Organisation</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .org-page { padding: 40px; min-height: 100vh; background: var(--page-bg); }
+    .org-header { margin-bottom: 32px; }
+    .org-header h1 { margin: 0 0 6px; color: var(--text-primary); font-size: 28px; }
+    .org-header p  { margin: 0; color: var(--text-muted); font-size: 15px; }
+    .org-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+    .org-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 24px; text-decoration: none;
+      display: flex; flex-direction: column; gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+      transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+      position: relative; overflow: hidden;
+    }
+    .org-card::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background:var(--org-accent,#10b981); opacity:0; transition:opacity 0.15s; }
+    .org-card:hover { box-shadow:0 8px 24px rgba(0,0,0,0.1); transform:translateY(-2px); border-color:var(--org-accent,#10b981); }
+    .org-card:hover::before { opacity:1; }
+    .org-icon  { font-size:30px; line-height:1; }
+    .org-name  { font-size:16px; font-weight:700; color:var(--text-primary); margin:0; }
+    .org-desc  { font-size:13px; color:var(--text-muted); line-height:1.55; margin:0; flex:1; }
+    .org-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; background:#d1fae5; color:#065f46; align-self:flex-start; }
+    .org-arrow { font-size:18px; color:var(--org-accent,#10b981); align-self:flex-end; opacity:0; transition:opacity 0.15s, transform 0.15s; }
+    .org-card:hover .org-arrow { opacity:1; transform:translateX(3px); }
+  </style>
+</head>
+<body>
+  <div class="org-page">
+    <div class="org-header">
+      <h1>🗂️ Organisation</h1>
+      <p>Tools to keep your school life on track — integrated with Google Classroom where possible.</p>
+    </div>
+    <div class="org-grid">
+      <a class="org-card" href="/assignment-tracker" style="--org-accent:#6366f1">
+        <div class="org-icon">📋</div>
+        <div class="org-name">Assignment Tracker</div>
+        <div class="org-badge">Classroom integrated</div>
+        <div class="org-desc">Kanban board to track assignments across To Do, In Progress and Done. Imports from Google Classroom automatically.</div>
+        <div class="org-arrow">→</div>
+      </a>
+      <a class="org-card" href="/grade-calculator" style="--org-accent:#f59e0b">
+        <div class="org-icon">📊</div>
+        <div class="org-name">Grade Calculator</div>
+        <div class="org-badge">Classroom integrated</div>
+        <div class="org-desc">See your current grade per class using real Classroom grades. Add missing scores and weights to project your final grade.</div>
+        <div class="org-arrow">→</div>
+      </a>
+      <a class="org-card" href="/schedule-builder" style="--org-accent:#0ea5e9">
+        <div class="org-icon">🗓️</div>
+        <div class="org-name">Schedule Builder</div>
+        <div class="org-badge">Classroom integrated</div>
+        <div class="org-desc">Build a weekly timetable. Your Classroom courses are pre-loaded as suggestions so you can slot them in quickly.</div>
+        <div class="org-arrow">→</div>
+      </a>
+    </div>
+  </div>
+  <script src="sidebar.js"></script>
+</body>
+</html>
