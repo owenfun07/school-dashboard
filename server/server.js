@@ -332,66 +332,68 @@ Rules:
 Respond with only valid JSON like:
 {"title":"...","author":"...","publisher":"...","publishDate":"..."}`;
 
- try {
-  // Access the environment variable
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = "gemini-3.1-flash-lite"; 
+try {
+  const model = "gemini-2.5-flash";
 
   const geminiResp = await fetch(
-    `https://googleapis.com{model}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 256,
-        },
-      }),
+          maxOutputTokens: 256
+        }
+      })
     }
   );
 
-  if (geminiResp.ok) {
-    const data = await geminiResp.json();
-    // Safely extract the generated text response
-    const outputText = data.candidates[0].content.parts[0].text;
-    console.log(outputText);
-  } else {
-    console.error("API Error:", await geminiResp.text());
+  const geminiData = await geminiResp.json();
+
+  if (!geminiResp.ok) {
+    console.error(geminiData);
+    return res.status(geminiResp.status).json({
+      error: "ai_unavailable"
+    });
   }
-} catch (error) {
-  console.error("Fetch failed:", error);
+
+  const raw =
+    geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  const clean = raw.replace(/```json|```/g, "").trim();
+
+  let parsed;
+
+  try {
+    parsed = JSON.parse(clean);
+  } catch {
+    return res.status(500).json({
+      error: "invalid_ai_response"
+    });
+  }
+
+  return res.json({
+    success: true,
+    data: parsed
+  });
+
+} catch (err) {
+  console.error("Gemini error:", err);
+  return res.status(500).json({
+    error: "ai_unavailable"
+  });
 }
 
-
-    // Always parse the body first so we can inspect the error details
-    const geminiData = await geminiResp.json().catch(() => ({}));
-
-    if (!geminiResp.ok) {
-      const status    = geminiResp.status;
-      const geminiMsg = geminiData?.error?.message || "";
-      console.error("Gemini API error", status, geminiMsg);
-
-      // 429 or any quota/exceeded message → friendly quota error
-      if (status === 429 || geminiMsg.toLowerCase().includes("quota") || geminiMsg.toLowerCase().includes("exceeded")) {
-        return res.status(429).json({ error: "quota_exceeded" });
-      }
-      // Any other non-OK response
-      return res.status(status).json({ error: "ai_unavailable" });
-    }
-
-    const raw   = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
-
-    res.json({ success: true, data: parsed });
-  } catch (err) {
-    console.error("Gemini error:", err);
-    res.status(500).json({ error: "ai_unavailable" });
-  }
 });
 
 // ── PAGE ROUTES ─────────────────────────────────────────────────────────
