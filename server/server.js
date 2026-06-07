@@ -332,7 +332,40 @@ Rules:
 Respond with only valid JSON like:
 {"title":"...","author":"...","publisher":"...","publishDate":"..."}`;
 
-  try { const geminiResp = await fetch( `https://googleapis.com{GEMINI_API_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 256 }, }), } );
+ try {
+  // Access the environment variable
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = "gemini-3.1-flash-lite"; 
+
+  const geminiResp = await fetch(
+    `https://googleapis.com{model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 256,
+        },
+      }),
+    }
+  );
+
+  if (geminiResp.ok) {
+    const data = await geminiResp.json();
+    // Safely extract the generated text response
+    const outputText = data.candidates[0].content.parts[0].text;
+    console.log(outputText);
+  } else {
+    console.error("API Error:", await geminiResp.text());
+  }
+} catch (error) {
+  console.error("Fetch failed:", error);
+}
+
 
     // Always parse the body first so we can inspect the error details
     const geminiData = await geminiResp.json().catch(() => ({}));
