@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Schedule Builder</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .sched-page { padding:32px 40px; min-height:100vh; background:var(--page-bg); }
+    .sched-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+    .sched-header h1 { margin:0; color:var(--text-primary); font-size:24px; }
+    .sched-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .sched-btn { border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary); border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+    .sched-btn:hover { background:var(--dash-bg); }
+    .sched-btn-primary { border:none; background:#0ea5e9; color:white; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+    .sched-btn-primary:hover { background:#0284c7; }
+
+    .sched-grid-wrap { overflow-x:auto; }
+    .sched-grid {
+      display:grid;
+      grid-template-columns:64px repeat(5,1fr);
+      gap:2px;
+      min-width:560px;
+      background:var(--card-border);
+      border:1px solid var(--card-border);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .sched-cell {
+      background:var(--card-bg); padding:0;
+      min-height:52px; position:relative;
+    }
+    .sched-cell-header {
+      background:var(--dash-bg); padding:10px 6px;
+      text-align:center; font-size:13px; font-weight:700;
+      color:var(--text-primary);
+    }
+    .sched-cell-time {
+      background:var(--dash-bg); padding:10px 6px;
+      text-align:right; font-size:11px; color:var(--text-muted);
+      font-weight:600; display:flex; align-items:center; justify-content:flex-end;
+    }
+    .sched-slot {
+      min-height:52px; padding:4px; cursor:pointer; position:relative;
+      transition:background 0.1s;
+    }
+    .sched-slot:hover { background:var(--dash-bg); }
+    .sched-slot.has-event { cursor:default; }
+
+    .sched-event {
+      border-radius:6px; padding:4px 6px; font-size:12px; font-weight:600;
+      line-height:1.3; position:relative; overflow:hidden;
+    }
+    .sched-event-del {
+      position:absolute; top:2px; right:4px; font-size:11px; cursor:pointer;
+      color:rgba(0,0,0,0.4); border:none; background:transparent; padding:0;
+      line-height:1; opacity:0; transition:opacity 0.1s;
+    }
+    .sched-event:hover .sched-event-del { opacity:1; }
+
+    /* Modal */
+    .sched-modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.4); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .sched-modal-overlay.open { display:flex; }
+    .sched-modal { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:24px; width:min(380px,90vw); box-shadow:0 20px 60px rgba(0,0,0,0.15); }
+    .sched-modal h3 { margin:0 0 16px; font-size:16px; color:var(--text-primary); }
+    .sched-modal label { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:4px; }
+    .sched-modal-input {
+      width:100%; border:1px solid var(--card-border); border-radius:8px; padding:9px 12px;
+      font-size:14px; background:var(--dash-bg); color:var(--text-primary);
+      box-sizing:border-box; margin-bottom:12px;
+    }
+    .sched-modal-input:focus { outline:none; border-color:#0ea5e9; }
+    .sched-modal-btns { display:flex; gap:8px; margin-top:4px; }
+    .sched-modal-save   { flex:1; border:none; background:#0ea5e9; color:white; border-radius:8px; padding:10px; font-size:14px; font-weight:600; cursor:pointer; }
+    .sched-modal-cancel { border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary); border-radius:8px; padding:10px 16px; font-size:14px; cursor:pointer; }
+
+    .color-row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+    .color-swatch { width:24px; height:24px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border-color .1s; }
+    .color-swatch.selected { border-color:var(--text-primary); }
+
+    .suggestions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+    .suggestion-chip { border:1px solid var(--card-border); background:var(--dash-bg); color:var(--text-secondary); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer; }
+    .suggestion-chip:hover { border-color:#0ea5e9; color:#0ea5e9; }
+
+    .status-banner { padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px; display:none; }
+    .status-banner.info { background:#e0f2fe; color:#0c4a6e; border:1px solid #bae6fd; display:block; }
+    .status-banner.warn { background:#fef3c7; color:#92400e; border:1px solid #fde68a; display:block; }
+  </style>
+</head>
+<body>
+<div class="sched-page">
+  <div class="sched-header">
+    <h1>🗓️ Schedule Builder</h1>
+    <div class="sched-actions">
+      <button class="sched-btn-primary" id="import-courses-btn">↓ Load my courses</button>
+      <button class="sched-btn" id="clear-btn">Clear all</button>
+    </div>
+  </div>
+
+  <div class="status-banner" id="status-banner"></div>
+  <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">Click any slot to add a class or event.</p>
+
+  <div class="sched-grid-wrap">
+    <div class="sched-grid" id="sched-grid"></div>
+  </div>
+</div>
+
+<!-- Add event modal -->
+<div class="sched-modal-overlay" id="modal-overlay">
+  <div class="sched-modal">
+    <h3 id="modal-title">Add to schedule</h3>
+    <div id="suggestions-wrap" style="display:none">
+      <label>Your courses (click to fill)</label>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+    <label>Name</label>
+    <input class="sched-modal-input" id="ev-name" placeholder="e.g. Biology, Lunch, Study Hall">
+    <label>Colour</label>
+    <div class="color-row" id="color-row"></div>
+    <div class="sched-modal-btns">
+      <button class="sched-modal-save" id="modal-save">Add</button>
+      <button class="sched-modal-cancel" id="modal-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="sidebar.js"></script>
+<script>
+const token = localStorage.getItem("access_token");
+const STORE = "schedule_builder_data";
+const DAYS  = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+const HOURS = [];
+for (let h=7; h<=20; h++) HOURS.push(h);
+
+const COLORS = [
+  "#6366f1","#0ea5e9","#10b981","#f59e0b","#ef4444",
+  "#8b5cf6","#ec4899","#14b8a6","#f97316","#64748b",
+];
+
+// schedule[day][hour] = {name, color} | null
+let schedule = JSON.parse(localStorage.getItem(STORE) || "{}");
+let courseSuggestions = [];
+let selectedColor = COLORS[0];
+let pendingSlot = null; // {day, hour}
+
+function save() { localStorage.setItem(STORE, JSON.stringify(schedule)); }
+
+function timeLabel(h) {
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour   = h > 12 ? h - 12 : h;
+  return hour + ":00 " + suffix;
+}
+
+function buildGrid() {
+  const grid = document.getElementById("sched-grid");
+  grid.innerHTML = "";
+
+  // Top-left corner
+  const corner = document.createElement("div");
+  corner.className = "sched-cell sched-cell-header";
+  grid.appendChild(corner);
+
+  // Day headers
+  DAYS.forEach(day => {
+    const h = document.createElement("div");
+    h.className = "sched-cell sched-cell-header";
+    h.textContent = day;
+    grid.appendChild(h);
+  });
+
+  // Time rows
+  HOURS.forEach(hour => {
+    // Time label
+    const tl = document.createElement("div");
+    tl.className = "sched-cell sched-cell-time";
+    tl.textContent = timeLabel(hour);
+    grid.appendChild(tl);
+
+    // Day slots
+    DAYS.forEach(day => {
+      const key = day + "-" + hour;
+      const ev  = schedule[key];
+      const slot = document.createElement("div");
+      slot.className = "sched-cell sched-slot" + (ev ? " has-event" : "");
+      slot.dataset.key = key;
+
+      if (ev) {
+        const evEl = document.createElement("div");
+        evEl.className = "sched-event";
+        evEl.style.background = ev.color + "22";
+        evEl.style.color       = ev.color;
+        evEl.style.borderLeft  = "3px solid " + ev.color;
+        evEl.innerHTML = `${escHtml(ev.name)}<button class="sched-event-del" onclick="removeEvent('${key}',event)">×</button>`;
+        slot.appendChild(evEl);
+      } else {
+        slot.addEventListener("click", () => openModal(day, hour));
+      }
+
+      grid.appendChild(slot);
+    });
+  });
+}
+
+function openModal(day, hour) {
+  pendingSlot = { day, hour };
+  document.getElementById("modal-title").textContent = `Add to ${day} at ${timeLabel(hour)}`;
+  document.getElementById("ev-name").value = "";
+
+  // Build colour swatches
+  const cr = document.getElementById("color-row");
+  cr.innerHTML = "";
+  COLORS.forEach(c => {
+    const sw = document.createElement("div");
+    sw.className = "color-swatch" + (c === selectedColor ? " selected" : "");
+    sw.style.background = c;
+    sw.onclick = () => { selectedColor = c; cr.querySelectorAll(".color-swatch").forEach(s=>s.classList.remove("selected")); sw.classList.add("selected"); };
+    cr.appendChild(sw);
+  });
+
+  // Course suggestions
+  const sw = document.getElementById("suggestions-wrap");
+  const sugg = document.getElementById("suggestions");
+  sugg.innerHTML = "";
+  if (courseSuggestions.length) {
+    sw.style.display = "block";
+    courseSuggestions.forEach(name => {
+      const chip = document.createElement("div");
+      chip.className = "suggestion-chip";
+      chip.textContent = name;
+      chip.onclick = () => { document.getElementById("ev-name").value = name; };
+      sugg.appendChild(chip);
+    });
+  } else { sw.style.display = "none"; }
+
+  document.getElementById("modal-overlay").classList.add("open");
+  setTimeout(() => document.getElementById("ev-name").focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  pendingSlot = null;
+}
+
+document.getElementById("modal-save").onclick = () => {
+  const name = document.getElementById("ev-name").value.trim();
+  if (!name || !pendingSlot) return;
+  const key = pendingSlot.day + "-" + pendingSlot.hour;
+  schedule[key] = { name, color: selectedColor };
+  save(); closeModal(); buildGrid();
+};
+
+document.getElementById("modal-cancel").onclick = closeModal;
+document.getElementById("modal-overlay").addEventListener("click", e => { if(e.target===document.getElementById("modal-overlay")) closeModal(); });
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeModal(); if(e.key==="Enter"&&document.getElementById("modal-overlay").classList.contains("open")) document.getElementById("modal-save").click(); });
+
+function removeEvent(key, e) {
+  e.stopPropagation();
+  delete schedule[key];
+  save(); buildGrid();
+}
+
+document.getElementById("clear-btn").onclick = () => {
+  if (!confirm("Clear the entire schedule?")) return;
+  schedule = {}; save(); buildGrid();
+};
+
+// ── Import course names as suggestions ───────────────────────────
+document.getElementById("import-courses-btn").addEventListener("click", async () => {
+  const banner = document.getElementById("status-banner");
+  if (!token) {
+    // Demo mode — just show a message
+    banner.className="status-banner warn";
+    banner.textContent="⚠️ Log in to load your Classroom courses as suggestions.";
+    return;
+  }
+  banner.className="status-banner info";
+  banner.textContent="⏳ Loading your courses…";
+  try {
+    const resp = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
+    const data = await resp.json();
+    courseSuggestions = (data.courses||[]).map(c=>c.name);
+    banner.textContent=`✓ Loaded ${courseSuggestions.length} course${courseSuggestions.length!==1?"s":""}. Click any slot to add them to your schedule.`;
+  } catch(err) {
+    banner.className="status-banner warn";
+    banner.textContent="⚠️ Could not load courses: "+err.message;
+  }
+});
+
+function escHtml(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+buildGrid();
+</script>
+</body>
+</html>
