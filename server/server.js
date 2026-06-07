@@ -352,6 +352,17 @@ Respond with only valid JSON like:
     }
 
     const geminiData = await geminiResp.json();
+
+    // Handle quota / rate limit errors from Gemini
+    if (!geminiResp.ok) {
+      const status = geminiResp.status;
+      const geminiMsg = geminiData?.error?.message || "";
+      if (status === 429 || geminiMsg.toLowerCase().includes("quota") || geminiMsg.toLowerCase().includes("exceeded")) {
+        return res.status(429).json({ error: "quota_exceeded" });
+      }
+      return res.status(status).json({ error: "ai_unavailable" });
+    }
+
     const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     // Strip any markdown fences just in case
@@ -361,7 +372,7 @@ Respond with only valid JSON like:
     res.json({ success: true, data: parsed });
   } catch (err) {
     console.error("Gemini error:", err);
-    res.status(500).json({ error: "AI enhancement failed: " + err.message });
+    res.status(500).json({ error: "ai_unavailable" });
   }
 });
 
