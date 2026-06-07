@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Grade Calculator</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .grade-page { padding:32px 40px; min-height:100vh; background:var(--page-bg); }
+    .grade-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+    .grade-header h1 { margin:0; color:var(--text-primary); font-size:24px; }
+
+    .course-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+    .course-tab {
+      border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary);
+      border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .course-tab.active { background:#f59e0b; color:white; border-color:#f59e0b; }
+    .add-course-tab {
+      border:1px dashed var(--card-border); background:transparent; color:var(--text-muted);
+      border-radius:8px; padding:7px 14px; font-size:13px; cursor:pointer;
+    }
+    .add-course-tab:hover { border-color:#f59e0b; color:#f59e0b; }
+
+    .grade-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:24px; max-width:800px; box-shadow:0 4px 14px rgba(0,0,0,0.05); }
+
+    .grade-summary {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px;
+    }
+    .grade-stat { background:var(--dash-bg); border:1px solid var(--card-border); border-radius:12px; padding:14px; text-align:center; }
+    .grade-stat-val  { font-size:28px; font-weight:700; color:var(--text-primary); }
+    .grade-stat-label{ font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+    .grade-table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+    .grade-table th { text-align:left; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; padding:8px 10px; border-bottom:2px solid var(--card-border); }
+    .grade-table td { padding:10px; border-bottom:1px solid var(--card-border); font-size:14px; color:var(--text-primary); vertical-align:middle; }
+    .grade-table tr:last-child td { border-bottom:none; }
+    .grade-table tr:hover td { background:var(--dash-bg); }
+
+    .grade-input {
+      border:1px solid var(--card-border); border-radius:6px; padding:5px 8px;
+      font-size:14px; background:var(--dash-bg); color:var(--text-primary); width:70px; text-align:center;
+    }
+    .grade-input:focus { outline:none; border-color:#f59e0b; }
+    .grade-del { border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; }
+    .grade-del:hover { color:#dc2626; background:#fef2f2; }
+
+    .grade-add-row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .grade-add-input {
+      border:1px solid var(--card-border); border-radius:8px; padding:8px 10px;
+      font-size:13px; background:var(--dash-bg); color:var(--text-primary);
+    }
+    .grade-add-input:focus { outline:none; border-color:#f59e0b; }
+    .grade-add-btn { border:none; background:#f59e0b; color:white; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; }
+    .grade-add-btn:hover { background:#d97706; }
+
+    .needed-section { background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:16px; margin-top:16px; }
+    .needed-title { font-size:13px; font-weight:600; color:#92400e; margin-bottom:8px; }
+    .needed-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .needed-label { font-size:13px; color:#92400e; }
+    .needed-input { border:1px solid #fde68a; border-radius:6px; padding:5px 8px; font-size:14px; background:white; width:80px; text-align:center; }
+    .needed-input:focus { outline:none; border-color:#f59e0b; }
+    .needed-result { font-size:16px; font-weight:700; color:#92400e; }
+
+    .status-banner { padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px; display:none; }
+    .status-banner.info { background:#fef3c7; color:#92400e; border:1px solid #fde68a; display:block; }
+    .status-banner.warn { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; display:block; }
+    .status-banner.ok   { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; display:block; }
+
+    .letter-grade { font-size:13px; font-weight:700; padding:3px 8px; border-radius:6px; }
+    .lg-a { background:#dcfce7; color:#166534; }
+    .lg-b { background:#dbeafe; color:#1e40af; }
+    .lg-c { background:#fef9c3; color:#854d0e; }
+    .lg-d { background:#ffedd5; color:#9a3412; }
+    .lg-f { background:#fee2e2; color:#991b1b; }
+  </style>
+</head>
+<body>
+<div class="grade-page">
+  <div class="grade-header">
+    <h1>📊 Grade Calculator</h1>
+    <button class="import-btn" id="import-btn" style="border:1px solid #f59e0b;background:#fef3c7;color:#92400e;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;">↓ Import from Classroom</button>
+  </div>
+
+  <div class="status-banner" id="status-banner"></div>
+
+  <div class="course-tabs" id="course-tabs">
+    <button class="add-course-tab" id="add-course-btn">+ Add course</button>
+  </div>
+
+  <div id="grade-body"></div>
+</div>
+
+<script src="sidebar.js"></script>
+<script>
+const token = localStorage.getItem("access_token");
+const STORE = "grade_calculator_data";
+
+// courses: [{id, name, assignments:[{id,title,score,maxPoints,weight}]}]
+let courses = JSON.parse(localStorage.getItem(STORE) || "[]");
+let activeId = courses[0]?.id || null;
+
+function save() { localStorage.setItem(STORE, JSON.stringify(courses)); }
+
+function letterGrade(pct) {
+  if (pct >= 90) return ["A", "lg-a"];
+  if (pct >= 80) return ["B", "lg-b"];
+  if (pct >= 70) return ["C", "lg-c"];
+  if (pct >= 60) return ["D", "lg-d"];
+  return ["F","lg-f"];
+}
+
+function calcGrade(course) {
+  const graded = course.assignments.filter(a => a.score !== null && a.score !== "" && a.maxPoints);
+  if (!graded.length) return null;
+  // Weighted if any have weight, otherwise simple average
+  const hasWeights = graded.some(a => a.weight);
+  if (hasWeights) {
+    let totalWeight = 0, weightedSum = 0;
+    graded.forEach(a => {
+      const w = parseFloat(a.weight) || 1;
+      weightedSum += (parseFloat(a.score) / a.maxPoints) * 100 * w;
+      totalWeight += w;
+    });
+    return totalWeight ? weightedSum / totalWeight : null;
+  } else {
+    const earned = graded.reduce((s,a) => s + parseFloat(a.score), 0);
+    const total  = graded.reduce((s,a) => s + a.maxPoints, 0);
+    return total ? (earned / total) * 100 : null;
+  }
+}
+
+function renderTabs() {
+  const tabsEl = document.getElementById("course-tabs");
+  tabsEl.innerHTML = "";
+  courses.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "course-tab" + (c.id === activeId ? " active" : "");
+    btn.textContent = c.name;
+    btn.onclick = () => { activeId = c.id; renderTabs(); renderCourse(); };
+    tabsEl.appendChild(btn);
+  });
+  const addBtn = document.createElement("button");
+  addBtn.className = "add-course-tab";
+  addBtn.textContent = "+ Add course";
+  addBtn.onclick = addCourseManual;
+  tabsEl.appendChild(addBtn);
+}
+
+function renderCourse() {
+  const body = document.getElementById("grade-body");
+  const course = courses.find(c => c.id === activeId);
+  if (!course) { body.innerHTML = `<p style="color:var(--text-muted)">No course selected. Import from Classroom or add one manually.</p>`; return; }
+
+  const pct   = calcGrade(course);
+  const pctStr = pct !== null ? pct.toFixed(1) + "%" : "—";
+  const [letter, lgClass] = pct !== null ? letterGrade(pct) : ["—",""];
+  const earned = course.assignments.filter(a=>a.score!==null&&a.score!=="").reduce((s,a)=>s+parseFloat(a.score||0),0);
+  const total  = course.assignments.filter(a=>a.score!==null&&a.score!=="").reduce((s,a)=>s+(a.maxPoints||0),0);
+
+  body.innerHTML = `
+  <div class="grade-card">
+    <div class="grade-summary">
+      <div class="grade-stat">
+        <div class="grade-stat-val">${pctStr}</div>
+        <div class="grade-stat-label">Current Grade</div>
+      </div>
+      <div class="grade-stat">
+        <div class="grade-stat-val"><span class="letter-grade ${lgClass}">${letter}</span></div>
+        <div class="grade-stat-label">Letter Grade</div>
+      </div>
+      <div class="grade-stat">
+        <div class="grade-stat-val">${total ? earned+"/"+total : "—"}</div>
+        <div class="grade-stat-label">Points Earned</div>
+      </div>
+      <div class="grade-stat">
+        <div class="grade-stat-val">${course.assignments.length}</div>
+        <div class="grade-stat-label">Assignments</div>
+      </div>
+    </div>
+
+    <table class="grade-table">
+      <thead><tr>
+        <th>Assignment</th>
+        <th>Score</th>
+        <th>Out of</th>
+        <th>Weight %</th>
+        <th>%</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="grade-tbody"></tbody>
+    </table>
+
+    <div class="grade-add-row">
+      <input class="grade-add-input" id="new-title"  placeholder="Assignment name" style="flex:2;min-width:140px">
+      <input class="grade-add-input" id="new-score"  placeholder="Score"  type="number" style="width:80px">
+      <input class="grade-add-input" id="new-max"    placeholder="Out of" type="number" style="width:80px">
+      <input class="grade-add-input" id="new-weight" placeholder="Weight%" type="number" style="width:80px">
+      <button class="grade-add-btn" onclick="addAssignment()">Add</button>
+    </div>
+
+    <div class="needed-section">
+      <div class="needed-title">What do I need on my next assignment?</div>
+      <div class="needed-row">
+        <span class="needed-label">Target grade:</span>
+        <input class="needed-input" id="target-grade" type="number" value="90" min="0" max="100">
+        <span class="needed-label">% &nbsp; Out of:</span>
+        <input class="needed-input" id="target-max" type="number" value="100" min="1">
+        <span class="needed-label">pts &nbsp; → Need:</span>
+        <span class="needed-result" id="needed-result">—</span>
+      </div>
+    </div>
+
+    <button onclick="deleteCourse('${course.id}')" style="margin-top:16px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;">Remove this course</button>
+  </div>`;
+
+  renderRows(course);
+
+  document.getElementById("target-grade").addEventListener("input", calcNeeded);
+  document.getElementById("target-max").addEventListener("input", calcNeeded);
+  calcNeeded();
+}
+
+function renderRows(course) {
+  const tbody = document.getElementById("grade-tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  course.assignments.forEach(a => {
+    const rowPct = (a.score !== null && a.score !== "" && a.maxPoints) ? ((parseFloat(a.score)/a.maxPoints)*100).toFixed(1)+"%" : "—";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escHtml(a.title)}</td>
+      <td><input class="grade-input" value="${a.score ?? ""}" data-id="${a.id}" data-field="score" type="number" min="0"></td>
+      <td><input class="grade-input" value="${a.maxPoints ?? ""}" data-id="${a.id}" data-field="maxPoints" type="number" min="0"></td>
+      <td><input class="grade-input" value="${a.weight ?? ""}" data-id="${a.id}" data-field="weight" type="number" min="0"></td>
+      <td>${rowPct}</td>
+      <td><button class="grade-del" onclick="deleteAssignment('${a.id}')">×</button></td>
+    `;
+    tbody.appendChild(tr);
+    tr.querySelectorAll(".grade-input").forEach(inp => {
+      inp.addEventListener("change", () => {
+        const c = courses.find(c=>c.id===activeId);
+        const asgn = c?.assignments.find(x=>x.id===inp.dataset.id);
+        if (asgn) {
+          const v = inp.value.trim();
+          asgn[inp.dataset.field] = v === "" ? null : parseFloat(v);
+          save(); renderCourse();
+        }
+      });
+    });
+  });
+}
+
+function addAssignment() {
+  const course = courses.find(c=>c.id===activeId); if(!course) return;
+  const title = document.getElementById("new-title").value.trim();
+  if (!title) return;
+  course.assignments.push({
+    id:        Date.now() + Math.random(),
+    title,
+    score:     document.getElementById("new-score").value  !== "" ? parseFloat(document.getElementById("new-score").value)  : null,
+    maxPoints: document.getElementById("new-max").value    !== "" ? parseFloat(document.getElementById("new-max").value)    : 100,
+    weight:    document.getElementById("new-weight").value !== "" ? parseFloat(document.getElementById("new-weight").value) : null,
+  });
+  save(); renderCourse();
+}
+
+function deleteAssignment(id) {
+  const c = courses.find(c=>c.id===activeId); if(!c) return;
+  c.assignments = c.assignments.filter(a=>String(a.id)!==String(id));
+  save(); renderCourse();
+}
+
+function deleteCourse(id) {
+  if (!confirm("Remove this course and all its data?")) return;
+  courses = courses.filter(c=>c.id!==id);
+  activeId = courses[0]?.id || null;
+  save(); renderTabs(); renderCourse();
+}
+
+function calcNeeded() {
+  const targetEl = document.getElementById("target-grade");
+  const maxEl    = document.getElementById("target-max");
+  const resultEl = document.getElementById("needed-result");
+  if (!targetEl||!maxEl||!resultEl) return;
+  const target = parseFloat(targetEl.value);
+  const maxPts = parseFloat(maxEl.value);
+  if (isNaN(target)||isNaN(maxPts)||!maxPts) { resultEl.textContent="—"; return; }
+
+  const course = courses.find(c=>c.id===activeId); if(!course) return;
+  const graded = course.assignments.filter(a=>a.score!==null&&a.score!==""&&a.maxPoints);
+  const earned = graded.reduce((s,a)=>s+parseFloat(a.score),0);
+  const total  = graded.reduce((s,a)=>s+a.maxPoints,0);
+  // (earned + needed) / (total + maxPts) = target/100
+  const needed = (target/100)*(total+maxPts) - earned;
+  if (needed < 0) { resultEl.textContent="Any score ✓"; return; }
+  if (needed > maxPts) { resultEl.textContent="Not possible with this assignment"; return; }
+  resultEl.textContent = needed.toFixed(1) + " / " + maxPts;
+}
+
+function addCourseManual() {
+  const name = prompt("Course name:");
+  if (!name?.trim()) return;
+  const id = "manual-" + Date.now();
+  courses.push({ id, name: name.trim(), assignments: [] });
+  activeId = id;
+  save(); renderTabs(); renderCourse();
+}
+
+function deleteCourse(id) {
+  if (!confirm("Remove this course?")) return;
+  courses = courses.filter(c=>c.id!==id);
+  activeId = courses[0]?.id||null;
+  save(); renderTabs(); renderCourse();
+}
+
+// ── Import from Classroom ──────────────────────────────────────────
+document.getElementById("import-btn").addEventListener("click", async () => {
+  const banner = document.getElementById("status-banner");
+  if (!token) {
+    banner.className="status-banner warn";
+    banner.textContent="⚠️ Log in to import grades from Classroom.";
+    return;
+  }
+  banner.className="status-banner info";
+  banner.textContent="⏳ Fetching courses and grades…";
+
+  try {
+    const cr = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
+    const cd = await cr.json();
+    const classroomCourses = cd.courses||[];
+    let added=0;
+
+    for (const c of classroomCourses) {
+      if (courses.find(x=>x.id===c.id)) continue; // already imported
+      const gr = await fetch(`/api/grades?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(c.id)}`);
+      const gd = await gr.json();
+      const assignments = (gd.courseWork||[])
+        .filter(w => w.maxPoints)
+        .map(w => ({
+          id:        w.id,
+          title:     w.title,
+          score:     w.assignedGrade ?? w.draftGrade ?? null,
+          maxPoints: w.maxPoints,
+          weight:    null,
+        }));
+      courses.push({ id: c.id, name: c.name, assignments });
+      added++;
+    }
+
+    if (!activeId && courses.length) activeId = courses[0].id;
+    save(); renderTabs(); renderCourse();
+    banner.className="status-banner ok";
+    banner.textContent=`✓ Imported ${added} course${added!==1?"s":""}. Grades pulled from Classroom where available.`;
+  } catch(err) {
+    banner.className="status-banner warn";
+    banner.textContent="⚠️ "+err.message;
+  }
+});
+
+function escHtml(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+renderTabs();
+renderCourse();
+</script>
+</body>
+</html>
