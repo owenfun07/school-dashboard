@@ -245,11 +245,66 @@ app.get("/api/drive/star", async (req, res) => {
   }
 });
 
+// ── GRADES ──────────────────────────────────────────────────────────────
+// Returns all coursework with submission grades for a course.
+// The studentSubmissions API includes assignedGrade and draftGrade.
+app.get("/api/grades", async (req, res) => {
+  try {
+    const { token, courseId } = req.query;
+    if (!courseId) return res.status(400).json({ error: "courseId is required" });
+
+    const auth      = await buildAuthClient(token);
+    const classroom = google.classroom({ version: "v1", auth });
+
+    const [cwResp] = await Promise.all([
+      classroom.courses.courseWork.list({ courseId, pageSize: 100 }),
+    ]);
+
+    const courseWork = cwResp.data.courseWork || [];
+
+    const withGrades = await Promise.all(courseWork.map(async work => {
+      try {
+        const subResp = await classroom.courses.courseWork.studentSubmissions.list({
+          courseId, courseWorkId: work.id, userId: "me", pageSize: 1,
+        });
+        const sub = subResp.data.studentSubmissions?.[0] || {};
+        return {
+          id:             work.id,
+          title:          work.title,
+          maxPoints:      work.maxPoints || null,
+          assignedGrade:  sub.assignedGrade ?? null,
+          draftGrade:     sub.draftGrade   ?? null,
+          state:          sub.state        || "UNKNOWN",
+          dueDate:        work.dueDate     || null,
+          workType:       work.workType    || "ASSIGNMENT",
+        };
+      } catch {
+        return {
+          id: work.id, title: work.title,
+          maxPoints: work.maxPoints || null,
+          assignedGrade: null, draftGrade: null,
+          state: "UNKNOWN", dueDate: work.dueDate || null,
+          workType: work.workType || "ASSIGNMENT",
+        };
+      }
+    }));
+
+    res.json({ courseWork: withGrades });
+  } catch (err) {
+    console.error("Grades error:", err);
+    res.status(401).json({ error: "Invalid credentials. Please re-login." });
+  }
+});
+
 // ── PAGE ROUTES ─────────────────────────────────────────────────────────
 app.get("/dashboard",    (req, res) => res.sendFile(path.join(process.cwd(), "../client/dashboard.html")));
 app.get("/calculators",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculators.html")));
 app.get("/calculator",   (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculator.html")));
-app.get("/tools",        (req, res) => res.sendFile(path.join(process.cwd(), "../client/tools.html")));
+app.get("/tools",             (req, res) => res.sendFile(path.join(process.cwd(), "../client/tools.html")));
+app.get("/organisation",      (req, res) => res.sendFile(path.join(process.cwd(), "../client/organisation.html")));
+app.get("/assignment-tracker",(req, res) => res.sendFile(path.join(process.cwd(), "../client/assignment-tracker.html")));
+app.get("/grade-calculator",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/grade-calculator.html")));
+app.get("/schedule-builder",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/schedule-builder.html")));
 app.get("/about",      (req, res) => res.sendFile(path.join(process.cwd(), "../client/about.html")));
 
 app.get("/:page", (req, res) => {
