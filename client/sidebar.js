@@ -28,11 +28,21 @@ const NAV = [
   },
   {
     type:  "category",
+    label: "Organisation",
+    href:  "/organisation",
+    items: [
+      { label: "Assignment Tracker", href: "/assignment-tracker" },
+      { label: "Grade Calculator",   href: "/grade-calculator"   },
+      { label: "Schedule Builder",   href: "/schedule-builder"   },
+    ],
+  },
+  {
+    type:  "category",
     label: "Tools",
     href:  "/tools",
     items: [
-      { label: "Source Citation",    href: "/placeholder-page-1" },
-      { label: "Calculators",         href: "/calculators" },
+      { label: "Source Citation", href: "/placeholder-page-1" },
+      { label: "Calculators",     href: "/calculators"        },
     ],
   },
 ];
