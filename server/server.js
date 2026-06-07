@@ -296,6 +296,75 @@ app.get("/api/grades", async (req, res) => {
   }
 });
 
+// ── AI: CITATION ENHANCE ────────────────────────────────────────────────
+// Calls Gemini to fill in missing citation fields.
+// The API key stays server-side — never exposed to the browser.
+app.use(express.json());
+
+app.post("/api/ai/enhance-citation", async (req, res) => {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    return res.status(503).json({ error: "AI enhancement is not configured on this server." });
+  }
+
+  const { url, title, author, publisher, publishDate } = req.body || {};
+  if (!url) return res.status(400).json({ error: "url is required" });
+
+  const prompt = `You are a citation metadata expert. A user wants to cite this webpage:
+
+URL: ${url}
+Currently known fields:
+- Title: ${title || "(missing)"}
+- Author: ${author || "(missing)"}
+- Publisher / Site name: ${publisher || "(missing)"}
+- Publish date: ${publishDate || "(missing)"}
+
+Your job: fill in any missing or incomplete fields using your knowledge of the URL and any context clues.
+Rules:
+- Only return a JSON object, no markdown, no explanation, no backticks.
+- Use exactly these keys: title, author, publisher, publishDate
+- publishDate must be in YYYY-MM-DD format, or empty string if unknown
+- author should be "Last, First" format if possible, or the organisation name
+- publisher should be the website/organisation name, not the full URL
+- If you genuinely cannot determine a field, use empty string ""
+- Do not invent specific people's names if you are not confident
+
+Respond with only valid JSON like:
+{"title":"...","author":"...","publisher":"...","publishDate":"..."}`;
+
+  try {
+    const geminiResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
+        }),
+      }
+    );
+
+    if (!geminiResp.ok) {
+      const err = await geminiResp.json().catch(() => ({}));
+      const msg = err?.error?.message || "Gemini API error " + geminiResp.status;
+      return res.status(geminiResp.status).json({ error: msg });
+    }
+
+    const geminiData = await geminiResp.json();
+    const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    // Strip any markdown fences just in case
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+
+    res.json({ success: true, data: parsed });
+  } catch (err) {
+    console.error("Gemini error:", err);
+    res.status(500).json({ error: "AI enhancement failed: " + err.message });
+  }
+});
+
 // ── PAGE ROUTES ─────────────────────────────────────────────────────────
 app.get("/dashboard",    (req, res) => res.sendFile(path.join(process.cwd(), "../client/dashboard.html")));
 app.get("/calculators",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculators.html")));
