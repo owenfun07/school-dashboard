@@ -26,6 +26,99 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive"
 ];
 
+const GOOGLE_API_SERVICES = [
+  {
+    key: "oauth",
+    name: "Google OAuth",
+    description: "Signs users in and grants the dashboard access to Google APIs.",
+    scopes: SCOPES,
+    requiresToken: false,
+  },
+  {
+    key: "classroom",
+    name: "Google Classroom API",
+    description: "Loads classes, assignments, submissions, and grades.",
+    scopes: SCOPES.filter(scope => scope.includes("classroom")),
+    requiresToken: true,
+  },
+  {
+    key: "calendar",
+    name: "Google Calendar API",
+    description: "Loads upcoming events from calendars the user can read.",
+    scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+    requiresToken: true,
+  },
+  {
+    key: "drive",
+    name: "Google Drive API",
+    description: "Searches recent and starred Drive files and updates starred state.",
+    scopes: ["https://www.googleapis.com/auth/drive"],
+    requiresToken: true,
+  },
+  {
+    key: "gemini",
+    name: "Gemini API",
+    description: "Enhances citation metadata from the server-side AI citation endpoint.",
+    scopes: [],
+    requiresToken: false,
+  },
+];
+
+function hasConfigValue(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function maskConfigValue(value) {
+  if (!hasConfigValue(value)) return null;
+  if (value.length <= 10) return `${value.slice(0, 2)}…${value.slice(-2)}`;
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
+}
+
+function getEnvStatus() {
+  return {
+    clientId: { configured: hasConfigValue(CLIENT_ID), masked: maskConfigValue(CLIENT_ID) },
+    clientSecret: { configured: hasConfigValue(CLIENT_SECRET) },
+    redirectUri: { configured: hasConfigValue(REDIRECT_URI), value: REDIRECT_URI || null },
+    geminiApiKey: { configured: hasConfigValue(process.env.GEMINI_API_KEY) },
+  };
+}
+
+function getErrorDebug(err) {
+  return {
+    message: err?.message || "Unknown error",
+    code: err?.code || err?.response?.status || null,
+    status: err?.response?.status || null,
+    statusText: err?.response?.statusText || null,
+    googleError: err?.response?.data?.error || null,
+    googleErrorDescription: err?.response?.data?.error_description || null,
+    errors: err?.response?.data?.error?.errors || null,
+  };
+}
+
+async function runGoogleApiCheck(key, label, fn) {
+  const started = Date.now();
+  try {
+    const data = await fn();
+    return {
+      key,
+      label,
+      status: "ok",
+      latencyMs: Date.now() - started,
+      checkedAt: new Date().toISOString(),
+      data,
+    };
+  } catch (err) {
+    return {
+      key,
+      label,
+      status: "error",
+      latencyMs: Date.now() - started,
+      checkedAt: new Date().toISOString(),
+      error: getErrorDebug(err),
+    };
+  }
+}
+
 // ── In-memory refresh token store ──────────────────────────────────────
 // Maps access_token → refresh_token so we can silently get new access tokens
 // when they expire (Google access tokens last ~1 hour).
@@ -296,6 +389,129 @@ app.get("/api/grades", async (req, res) => {
   }
 });
 
+// ── GOOGLE API STATUS / DEBUG ──────────────────────────────────────────
+app.get("/api/google/status", async (req, res) => {
+  const token = req.query.token;
+  const hasToken = hasConfigValue(token);
+  const env = getEnvStatus();
+  const oauthConfigured = env.clientId.configured && env.clientSecret.configured && env.redirectUri.configured;
+
+  const status = {
+    generatedAt: new Date().toISOString(),
+    server: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      uptimeSeconds: Math.round(process.uptime()),
+    },
+    oauth: {
+      configured: oauthConfigured,
+      tokenProvided: hasToken,
+      refreshTokensCached: refreshTokenStore.size,
+      requestedScopes: SCOPES,
+    },
+    environment: env,
+    services: GOOGLE_API_SERVICES.map(service => ({
+      ...service,
+      status: service.key === "oauth"
+        ? (oauthConfigured ? "configured" : "missing_config")
+        : service.key === "gemini"
+          ? (env.geminiApiKey.configured ? "configured" : "missing_config")
+          : hasToken
+            ? "pending"
+            : "needs_token",
+    })),
+    checks: [],
+  };
+
+  if (!oauthConfigured) {
+    status.checks.push({
+      key: "oauth-config",
+      label: "OAuth environment variables",
+      status: "error",
+      checkedAt: new Date().toISOString(),
+      error: {
+        message: "CLIENT_ID, CLIENT_SECRET, and REDIRECT_URI must be configured before Google user APIs can be checked.",
+      },
+    });
+  }
+
+  if (!hasToken) {
+    status.checks.push({
+      key: "access-token",
+      label: "Browser access token",
+      status: "skipped",
+      checkedAt: new Date().toISOString(),
+      data: {
+        message: "No access token was provided. Log in with Google, then refresh this page to run live API checks.",
+      },
+    });
+    return res.json(status);
+  }
+
+  const auth = await buildAuthClient(token);
+
+  status.checks.push(await runGoogleApiCheck("token-info", "OAuth token info", async () => {
+    const info = await auth.getTokenInfo(token);
+    return {
+      audienceMatchesClient: info.aud === CLIENT_ID,
+      expiresInSeconds: info.expiry_date ? Math.max(0, Math.round((info.expiry_date - Date.now()) / 1000)) : null,
+      scopes: info.scopes || [],
+      email: info.email || null,
+    };
+  }));
+
+  const classroom = google.classroom({ version: "v1", auth });
+  const calendar = google.calendar({ version: "v3", auth });
+  const drive = google.drive({ version: "v3", auth });
+
+  const apiChecks = await Promise.all([
+    runGoogleApiCheck("classroom", "Classroom courses.list", async () => {
+      const resp = await classroom.courses.list({ pageSize: 1 });
+      return {
+        sampleCount: resp.data.courses?.length || 0,
+        nextPageTokenPresent: !!resp.data.nextPageToken,
+      };
+    }),
+    runGoogleApiCheck("calendar", "Calendar calendarList.list", async () => {
+      const resp = await calendar.calendarList.list({ maxResults: 1, showHidden: false });
+      return {
+        sampleCount: resp.data.items?.length || 0,
+        nextPageTokenPresent: !!resp.data.nextPageToken,
+      };
+    }),
+    runGoogleApiCheck("drive", "Drive files.list", async () => {
+      const resp = await drive.files.list({
+        pageSize: 1,
+        q: "trashed = false",
+        fields: "files(id,name,mimeType,modifiedTime),nextPageToken",
+        orderBy: "modifiedTime desc",
+      });
+      return {
+        sampleCount: resp.data.files?.length || 0,
+        nextPageTokenPresent: !!resp.data.nextPageToken,
+        sampleFile: resp.data.files?.[0]
+          ? {
+              idPresent: !!resp.data.files[0].id,
+              name: resp.data.files[0].name,
+              mimeType: resp.data.files[0].mimeType,
+              modifiedTime: resp.data.files[0].modifiedTime,
+            }
+          : null,
+      };
+    }),
+  ]);
+
+  status.checks.push(...apiChecks);
+
+  status.services = status.services.map(service => {
+    if (service.key === "oauth" || service.key === "gemini") return service;
+    const check = apiChecks.find(item => item.key === service.key);
+    return { ...service, status: check?.status || service.status };
+  });
+
+  return res.json(status);
+});
+
 // ── AI: CITATION ENHANCE ────────────────────────────────────────────────
 // Calls Gemini to fill in missing citation fields.
 // The API key stays server-side — never exposed to the browser.
@@ -401,6 +617,7 @@ app.get("/dashboard",    (req, res) => res.sendFile(path.join(process.cwd(), "..
 app.get("/calculators",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculators.html")));
 app.get("/calculator",   (req, res) => res.sendFile(path.join(process.cwd(), "../client/calculator.html")));
 app.get("/tools",             (req, res) => res.sendFile(path.join(process.cwd(), "../client/tools.html")));
+app.get("/google-api-status", (req, res) => res.sendFile(path.join(process.cwd(), "../client/google-api-status.html")));
 app.get("/organisation",      (req, res) => res.sendFile(path.join(process.cwd(), "../client/organisation.html")));
 app.get("/assignment-tracker",(req, res) => res.sendFile(path.join(process.cwd(), "../client/assignment-tracker.html")));
 app.get("/grade-calculator",  (req, res) => res.sendFile(path.join(process.cwd(), "../client/grade-calculator.html")));
