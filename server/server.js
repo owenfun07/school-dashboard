@@ -138,7 +138,7 @@ async function checkGeminiApi() {
         contents: [
           {
             parts: [
-              { text: "Reply with exactly: Good" }
+              { text: "Reply with exactly: ok" }
             ]
           }
         ],
@@ -171,6 +171,161 @@ async function checkGeminiApi() {
     responded: true,
     responseText: geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "",
     finishReason: geminiData?.candidates?.[0]?.finishReason || null,
+  };
+}
+
+
+const CITATION_AI_MODEL = "gemini-2.5-flash";
+const CITATION_FIELDS = ["title", "author", "publisher", "publishDate"];
+
+function cleanCitationValue(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCitationInput(values = {}) {
+  return {
+    url: cleanCitationValue(values.url),
+    title: cleanCitationValue(values.title),
+    author: cleanCitationValue(values.author),
+    publisher: cleanCitationValue(values.publisher),
+    publishDate: cleanCitationValue(values.publishDate),
+  };
+}
+
+function normalizeCitationData(values = {}) {
+  return {
+    title: cleanCitationValue(values.title),
+    author: cleanCitationValue(values.author),
+    publisher: cleanCitationValue(values.publisher),
+    publishDate: cleanCitationValue(values.publishDate),
+  };
+}
+
+function mergeCitationData(...sources) {
+  const merged = normalizeCitationData();
+  sources.forEach(source => {
+    const normalized = normalizeCitationData(source);
+    CITATION_FIELDS.forEach(field => {
+      if (normalized[field]) merged[field] = normalized[field];
+    });
+  });
+  return merged;
+}
+
+function getRemainingMissingFields(original, aiData = {}) {
+  const normalizedOriginal = normalizeCitationInput(original);
+  const normalizedAi = normalizeCitationData(aiData);
+  return CITATION_FIELDS.filter(field => !normalizedOriginal[field] && !normalizedAi[field]);
+}
+
+function buildCitationPrompt(input, { grounded = false } = {}) {
+  const evidenceInstruction = grounded
+    ? "Use Google Search grounding to verify the exact webpage and fill only fields supported by search results or the provided metadata."
+    : "Use only the provided URL and metadata context. Do not guess if the evidence is not strong.";
+
+  return `You are a citation metadata expert. A user wants to cite this webpage:
+
+URL: ${input.url}
+Currently known fields:
+- Title: ${input.title || "(missing)"}
+- Author: ${input.author || "(missing)"}
+- Publisher / Site name: ${input.publisher || "(missing)"}
+- Publish date: ${input.publishDate || "(missing)"}
+
+Your job: fill in any missing or incomplete fields. ${evidenceInstruction}
+Rules:
+- Only return a JSON object, no markdown, no explanation, no backticks.
+- Use exactly these keys: title, author, publisher, publishDate
+- publishDate must be in YYYY-MM-DD format, or empty string if unknown
+- author should be "Last, First" format if possible, or the organisation name
+- publisher should be the website/organisation name, not the full URL
+- If you genuinely cannot determine a field, use empty string ""
+- Do not invent specific people's names or publication dates if you are not confident
+
+Respond with only valid JSON like:
+{"title":"...","author":"...","publisher":"...","publishDate":"..."}`;
+}
+
+function extractGeminiText(geminiData) {
+  return geminiData?.candidates?.[0]?.content?.parts
+    ?.map(part => part.text || "")
+    .join("")
+    .trim() || "";
+}
+
+function parseCitationJson(raw) {
+  const clean = raw.replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(clean);
+  return normalizeCitationData(parsed);
+}
+
+function extractGroundingSources(geminiData) {
+  const chunks = geminiData?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  return chunks
+    .map(chunk => chunk.web)
+    .filter(web => web?.uri)
+    .map(web => ({
+      title: web.title || web.uri,
+      uri: web.uri,
+    }));
+}
+
+async function callGeminiCitation({ apiKey, input, grounded = false }) {
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: buildCitationPrompt(input, { grounded }) }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: grounded ? 0 : 0.1,
+      maxOutputTokens: 256,
+    }
+  };
+
+  if (grounded) {
+    requestBody.tools = [
+      {
+        google_search: {},
+      }
+    ];
+  }
+
+  const geminiResp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${CITATION_AI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    }
+  );
+
+  const geminiData = await geminiResp.json().catch(() => ({}));
+
+  if (!geminiResp.ok) {
+    const err = new Error(geminiData?.error?.message || `Gemini API responded with HTTP ${geminiResp.status}`);
+    err.response = {
+      status: geminiResp.status,
+      statusText: geminiResp.statusText,
+      data: geminiData,
+    };
+    err.details = {
+      model: CITATION_AI_MODEL,
+      grounded,
+      response: geminiData,
+    };
+    throw err;
+  }
+
+  const raw = extractGeminiText(geminiData);
+  return {
+    data: parseCitationJson(raw),
+    raw,
+    sources: grounded ? extractGroundingSources(geminiData) : [],
   };
 }
 
@@ -584,93 +739,96 @@ app.post("/api/ai/enhance-citation", async (req, res) => {
     return res.status(503).json({ error: "AI enhancement is not configured on this server." });
   }
 
-  const { url, title, author, publisher, publishDate } = req.body || {};
-  if (!url) return res.status(400).json({ error: "url is required" });
+  const input = normalizeCitationInput(req.body || {});
+  if (!input.url) return res.status(400).json({ error: "url is required" });
 
-  const prompt = `You are a citation metadata expert. A user wants to cite this webpage:
-
-URL: ${url}
-Currently known fields:
-- Title: ${title || "(missing)"}
-- Author: ${author || "(missing)"}
-- Publisher / Site name: ${publisher || "(missing)"}
-- Publish date: ${publishDate || "(missing)"}
-
-Your job: fill in any missing or incomplete fields using your knowledge of the URL and any context clues.
-Rules:
-- Only return a JSON object, no markdown, no explanation, no backticks.
-- Use exactly these keys: title, author, publisher, publishDate
-- publishDate must be in YYYY-MM-DD format, or empty string if unknown
-- author should be "Last, First" format if possible, or the organisation name
-- publisher should be the website/organisation name, not the full URL
-- If you genuinely cannot determine a field, use empty string ""
-- Do not invent specific people's names if you are not confident
-
-Respond with only valid JSON like:
-{"title":"...","author":"...","publisher":"...","publishDate":"..."}`;
-
-try {
-  const model = "gemini-2.5-flash";
-
-  const geminiResp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+  const originallyMissing = getRemainingMissingFields(input);
+  if (originallyMissing.length === 0) {
+    return res.json({
+      success: true,
+      data: normalizeCitationData(input),
+      ai: {
+        mode: "not_needed",
+        attemptedGrounding: false,
+        missingFields: [],
+        sources: [],
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 256
-        }
-      })
-    }
-  );
-
-  const geminiData = await geminiResp.json();
-
-  if (!geminiResp.ok) {
-    console.error(geminiData);
-    return res.status(geminiResp.status).json({
-      error: "ai_unavailable"
     });
   }
 
-  const raw =
-    geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-  const clean = raw.replace(/```json|```/g, "").trim();
-
-  let parsed;
+  let standardResult = null;
+  let standardError = null;
 
   try {
-    parsed = JSON.parse(clean);
-  } catch {
-    return res.status(500).json({
-      error: "invalid_ai_response"
+    standardResult = await callGeminiCitation({
+      apiKey: GEMINI_API_KEY,
+      input,
+      grounded: false,
     });
+
+    const standardMissing = getRemainingMissingFields(input, standardResult.data);
+    if (standardMissing.length === 0) {
+      return res.json({
+        success: true,
+        data: standardResult.data,
+        ai: {
+          mode: "standard",
+          attemptedGrounding: false,
+          missingFields: [],
+          sources: [],
+        },
+      });
+    }
+  } catch (err) {
+    standardError = err;
+    console.error("Gemini standard citation error:", err);
   }
 
-  return res.json({
-    success: true,
-    data: parsed
-  });
+  try {
+    const groundedResult = await callGeminiCitation({
+      apiKey: GEMINI_API_KEY,
+      input,
+      grounded: true,
+    });
 
-} catch (err) {
-  console.error("Gemini error:", err);
-  return res.status(500).json({
-    error: "ai_unavailable"
-  });
-}
+    const mergedData = mergeCitationData(standardResult?.data, groundedResult.data);
+    return res.json({
+      success: true,
+      data: mergedData,
+      ai: {
+        mode: "grounded",
+        attemptedGrounding: true,
+        missingFields: getRemainingMissingFields(input, mergedData),
+        sources: groundedResult.sources,
+      },
+    });
+  } catch (groundedError) {
+    console.error("Gemini grounded citation error:", groundedError);
 
+    if (standardResult) {
+      return res.json({
+        success: true,
+        data: standardResult.data,
+        ai: {
+          mode: "standard",
+          attemptedGrounding: true,
+          missingFields: getRemainingMissingFields(input, standardResult.data),
+          sources: [],
+          warning: "google_search_grounding_unavailable",
+          groundingError: getErrorDebug(groundedError),
+        },
+      });
+    }
+
+    const status = groundedError?.response?.status || standardError?.response?.status || 500;
+    return res.status(status).json({
+      error: status === 429 ? "quota_exceeded" : "ai_unavailable",
+      debug: {
+        standardError: standardError ? getErrorDebug(standardError) : null,
+        groundingError: getErrorDebug(groundedError),
+      },
+    });
+  }
 });
 
 // ── PAGE ROUTES ─────────────────────────────────────────────────────────
