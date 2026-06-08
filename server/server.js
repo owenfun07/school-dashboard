@@ -138,13 +138,13 @@ async function checkGeminiApi() {
         contents: [
           {
             parts: [
-              { text: "Reply with exactly: All good!" }
+              { text: "Reply with exactly: Good" }
             ]
           }
         ],
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 16,
+          maxOutputTokens: 8,
         },
       }),
     }
