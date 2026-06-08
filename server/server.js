@@ -144,7 +144,7 @@ async function checkGeminiApi() {
         ],
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 8,
+          maxOutputTokens: 16,
         },
       }),
     }
