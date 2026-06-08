@@ -138,7 +138,7 @@ async function checkGeminiApi() {
         contents: [
           {
             parts: [
-              { text: "Reply with exactly: ok" }
+              { text: "Reply with exactly: All good!" }
             ]
           }
         ],
