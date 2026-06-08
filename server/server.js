@@ -92,6 +92,7 @@ function getErrorDebug(err) {
     googleError: err?.response?.data?.error || null,
     googleErrorDescription: err?.response?.data?.error_description || null,
     errors: err?.response?.data?.error?.errors || null,
+    details: err?.details || null,
   };
 }
 
@@ -117,6 +118,60 @@ async function runGoogleApiCheck(key, label, fn) {
       error: getErrorDebug(err),
     };
   }
+}
+
+async function checkGeminiApi() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!hasConfigValue(apiKey)) {
+    throw new Error("GEMINI_API_KEY is not configured, so the Gemini API cannot be checked.");
+  }
+
+  const model = "gemini-2.5-flash";
+  const geminiResp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: "Reply with exactly: ok" }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 8,
+        },
+      }),
+    }
+  );
+
+  const geminiData = await geminiResp.json().catch(() => ({}));
+
+  if (!geminiResp.ok) {
+    const err = new Error(geminiData?.error?.message || `Gemini API responded with HTTP ${geminiResp.status}`);
+    err.response = {
+      status: geminiResp.status,
+      statusText: geminiResp.statusText,
+      data: geminiData,
+    };
+    err.details = {
+      model,
+      response: geminiData,
+    };
+    throw err;
+  }
+
+  return {
+    model,
+    responded: true,
+    responseText: geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "",
+    finishReason: geminiData?.candidates?.[0]?.finishReason || null,
+  };
 }
 
 // ── In-memory refresh token store ──────────────────────────────────────
@@ -434,6 +489,12 @@ app.get("/api/google/status", async (req, res) => {
       },
     });
   }
+
+  const geminiCheck = await runGoogleApiCheck("gemini", "Gemini generateContent", checkGeminiApi);
+  status.checks.push(geminiCheck);
+  status.services = status.services.map(service =>
+    service.key === "gemini" ? { ...service, status: geminiCheck.status } : service
+  );
 
   if (!hasToken) {
     status.checks.push({
