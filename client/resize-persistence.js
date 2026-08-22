@@ -5,42 +5,24 @@
 // =====================================================================
 
 (function () {
-  const originalSetCardPref = window.setCardPref;
-  if (typeof originalSetCardPref !== "function") return;
-
   let resizingCard = null;
+  let resizing = false;
 
-  // The existing resize handler calls setCardPref("minHeight", ...) on
-  // every mousemove. Keep that change in memory, but don't write to
-  // localStorage until mouseup.
-  window.setCardPref = function (cardId, key, value) {
-    if ((key === "minHeight" || key === "width") && resizingCard) {
-      if (!window.userPrefs) return;
-      if (!window.userPrefs.cardCustom) window.userPrefs.cardCustom = {};
-      if (!window.userPrefs.cardCustom[cardId]) window.userPrefs.cardCustom[cardId] = {};
-      if (value === null || value === undefined) delete window.userPrefs.cardCustom[cardId][key];
-      else window.userPrefs.cardCustom[cardId][key] = value;
-      return;
-    }
-    return originalSetCardPref(cardId, key, value);
+  // Block dashboard preference writes while a resize is in progress.
+  // The existing dashboard resize handler can continue updating the card
+  // visually without repeatedly writing to localStorage.
+  const originalSetItem = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (key, value) {
+    if (resizing && key === "dashboard_prefs") return;
+    return originalSetItem.call(this, key, value);
   };
 
-  // The original script declares userPrefs with let, so it isn't exposed
-  // on window. Capture it from localStorage for the small persistence layer.
-  const prefs = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}");
-  window.userPrefs = prefs;
-
-  // Keep this object synchronized with the original preferences object.
-  const originalSavePrefs = window.savePrefs;
-  window.savePrefs = function () {
-    if (typeof originalSavePrefs === "function") originalSavePrefs();
-    else localStorage.setItem("dashboard_prefs", JSON.stringify(window.userPrefs));
-  };
-
-  // Restore saved custom widths after the main dashboard script has applied
-  // its other preferences.
   function restoreWidths() {
-    const custom = window.userPrefs.cardCustom || {};
+    let prefs;
+    try { prefs = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}"); }
+    catch (_) { prefs = {}; }
+
+    const custom = prefs.cardCustom || {};
     Object.entries(custom).forEach(([cardId, opts]) => {
       const card = document.querySelector(`.card[data-card="${cardId}"]`);
       if (!card || card.classList.contains("card-wide")) return;
@@ -50,17 +32,23 @@
 
   function startResize(card) {
     resizingCard = card;
+    resizing = true;
   }
 
   function finishResize() {
     if (!resizingCard) return;
+
     const card = resizingCard;
     const cardId = card.dataset.card;
 
-    if (!window.userPrefs.cardCustom) window.userPrefs.cardCustom = {};
-    if (!window.userPrefs.cardCustom[cardId]) window.userPrefs.cardCustom[cardId] = {};
+    let prefs;
+    try { prefs = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}"); }
+    catch (_) { prefs = {}; }
 
-    const opts = window.userPrefs.cardCustom[cardId];
+    if (!prefs.cardCustom) prefs.cardCustom = {};
+    if (!prefs.cardCustom[cardId]) prefs.cardCustom[cardId] = {};
+
+    const opts = prefs.cardCustom[cardId];
     opts.minHeight = Math.round(card.getBoundingClientRect().height);
 
     if (!card.classList.contains("card-wide")) {
@@ -69,7 +57,9 @@
       delete opts.width;
     }
 
-    localStorage.setItem("dashboard_prefs", JSON.stringify(window.userPrefs));
+    // Allow the final save through now that the resize is complete.
+    resizing = false;
+    localStorage.setItem("dashboard_prefs", JSON.stringify(prefs));
     resizingCard = null;
   }
 
@@ -83,14 +73,17 @@
 
   document.addEventListener("mouseup", finishResize, true);
 
-  // Reset buttons should also remove the saved custom width.
+  // Reset buttons should also remove any saved custom width.
   document.addEventListener("click", function (e) {
     const btn = e.target.closest("#reset-layout-btn, #edit-mode-reset");
     if (!btn) return;
     setTimeout(function () {
-      const custom = window.userPrefs.cardCustom || {};
+      let prefs;
+      try { prefs = JSON.parse(localStorage.getItem("dashboard_prefs") || "{}"); }
+      catch (_) { prefs = {}; }
+      const custom = prefs.cardCustom || {};
       Object.values(custom).forEach(opts => delete opts.width);
-      localStorage.setItem("dashboard_prefs", JSON.stringify(window.userPrefs));
+      localStorage.setItem("dashboard_prefs", JSON.stringify(prefs));
     }, 0);
   });
 
