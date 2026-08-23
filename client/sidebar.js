@@ -51,7 +51,12 @@ const NAV = [
 (function () {
   const currentPath = window.location.pathname;
   const isDemo      = localStorage.getItem("demo_mode") === "1";
+  const isDeveloper = localStorage.getItem("developer_mode") === "1";
   const hasAuth     = !!localStorage.getItem("access_token");
+
+  // Developer Mode intentionally bypasses the normal navigation restrictions.
+  // The flag is only set after the server verifies DEV_API_CODE.
+  const bypassAuth = isDeveloper || hasAuth;
 
   // ── 1. Hamburger button ─────────────────────────────────────────────
   const toggleBtn = document.createElement("button");
@@ -77,8 +82,21 @@ const NAV = [
   heading.textContent = "Menu";
   aside.appendChild(heading);
 
-  // ── Demo mode banner ────────────────────────────────────────────────
-  if (isDemo && !hasAuth) {
+  // ── Mode banner ─────────────────────────────────────────────────────
+  if (isDeveloper && !hasAuth) {
+    const banner = document.createElement("div");
+    banner.className = "sidebar-demo-banner";
+    banner.innerHTML = `
+      <span>🛠️ You're in developer mode.</span>
+      <a href="/" class="sidebar-demo-login-link">Exit developer mode →</a>
+    `;
+    banner.querySelector("a").addEventListener("click", function (e) {
+      e.preventDefault();
+      localStorage.removeItem("developer_mode");
+      window.location.href = "/";
+    });
+    aside.appendChild(banner);
+  } else if (isDemo && !hasAuth && !isDeveloper) {
     const banner = document.createElement("div");
     banner.className = "sidebar-demo-banner";
     banner.innerHTML = `
@@ -99,7 +117,7 @@ const NAV = [
   // ── 3. Build nav items ──────────────────────────────────────────────
   NAV.forEach(function (item) {
     if (item.type === "link") {
-      const blocked = isDemo && !hasAuth && item.requiresAuth;
+      const blocked = isDemo && !bypassAuth && item.requiresAuth;
 
       const a = document.createElement("a");
       a.textContent = item.label;
@@ -114,11 +132,9 @@ const NAV = [
         a.setAttribute("aria-disabled", "true");
         a.addEventListener("click", function (e) {
           e.preventDefault();
-          // Toggle the auth message directly below this link
           const showing = !authMsg.classList.contains("hidden");
           authMsg.classList.toggle("hidden", showing);
           if (!showing) {
-            // Insert right after this link if not already there
             if (authMsg.previousElementSibling !== a) {
               a.insertAdjacentElement("afterend", authMsg);
             }
@@ -178,7 +194,6 @@ const NAV = [
     }
   });
 
-  // Auth message lives in the aside but gets moved next to whichever link was clicked
   aside.appendChild(authMsg);
 
   document.body.insertBefore(aside, toggleBtn.nextSibling);
@@ -197,7 +212,7 @@ const NAV = [
   function closeMenu() {
     aside.classList.remove("open");
     overlay.classList.remove("open");
-    authMsg.classList.add("hidden"); // hide auth msg when sidebar closes
+    authMsg.classList.add("hidden");
   }
 
   toggleBtn.addEventListener("click", openMenu);
