@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { google } from "googleapis";
 import path from "path";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -495,6 +496,25 @@ app.post("/api/ai/enhance-citation", async (req, res) => {
     const status = groundedError?.response?.status || standardError?.response?.status || 500;
     return res.status(status).json({ error: status === 429 ? "quota_exceeded" : "ai_unavailable" });
   }
+});
+
+// ── Developer Mode ─────────────────────────────────────────────────────
+// The secret code is server-side only. It is never sent to the browser.
+app.post("/api/dev-mode/verify", (req, res) => {
+  const expected = process.env.DEV_API_CODE;
+  const provided = typeof req.body?.code === "string" ? req.body.code : "";
+
+  if (!hasConfigValue(expected)) {
+    return res.status(503).json({ success: false, error: "Developer mode is not configured." });
+  }
+
+  const expectedBuffer = Buffer.from(expected);
+  const providedBuffer = Buffer.from(provided);
+  const valid = expectedBuffer.length === providedBuffer.length &&
+    crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+
+  if (!valid) return res.status(401).json({ success: false, error: "Invalid developer code." });
+  return res.json({ success: true });
 });
 
 // ── Page routes ─────────────────────────────────────────────────────────
