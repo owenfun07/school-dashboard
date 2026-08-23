@@ -21,6 +21,7 @@
     </a>
 
     <button class="demo-link" id="demo-link-btn">Can't log in / don't want to?</button>
+    <button class="demo-link" id="dev-mode-btn" style="margin-top:8px;">Developer Mode</button>
   </div>
 
   <!-- Demo modal -->
@@ -41,6 +42,21 @@
     </div>
   </div>
   <div id="demo-modal-overlay" class="login-modal-overlay hidden"></div>
+
+  <!-- Developer mode modal -->
+  <div id="dev-modal" class="login-modal hidden">
+    <div class="login-modal-card">
+      <h2 class="login-modal-title">Developer Mode</h2>
+      <p class="login-modal-body">Enter the developer access code to enable unrestricted testing access.</p>
+      <input id="dev-code-input" type="password" autocomplete="off" placeholder="Developer code" style="width:100%;box-sizing:border-box;margin:10px 0;padding:12px;border-radius:10px;border:1px solid var(--border-color, #ccc);background:var(--input-bg, #fff);color:var(--text-primary, #111);">
+      <p id="dev-error" class="login-modal-body hidden" style="font-size:13px;color:#d33;">Incorrect developer code.</p>
+      <div class="login-modal-actions">
+        <button id="dev-submit-btn" class="google-btn" style="justify-content:center;">Enable Developer Mode</button>
+        <button id="dev-cancel-btn" class="demo-modal-cancel">Go back</button>
+      </div>
+    </div>
+  </div>
+  <div id="dev-modal-overlay" class="login-modal-overlay hidden"></div>
 
   <div class="footer">
     <a href="/privacy">Privacy Policy</a>
@@ -83,6 +99,7 @@
       if (!e.data || e.data.type !== "google-auth-success" || !e.data.token) return;
       localStorage.setItem("access_token", e.data.token);
       localStorage.removeItem("demo_mode");
+      localStorage.removeItem("developer_mode");
       window.location.href = "/dashboard";
     });
 
@@ -101,12 +118,63 @@
     demoCancelBtn.addEventListener("click", closeDemoModal);
     demoModalOverlay.addEventListener("click", closeDemoModal);
 
+    // ── Developer mode ──
+    const devModeBtn = document.getElementById("dev-mode-btn");
+    const devModal = document.getElementById("dev-modal");
+    const devOverlay = document.getElementById("dev-modal-overlay");
+    const devInput = document.getElementById("dev-code-input");
+    const devSubmit = document.getElementById("dev-submit-btn");
+    const devCancel = document.getElementById("dev-cancel-btn");
+    const devError = document.getElementById("dev-error");
+
+    function openDevModal() {
+      devModal.classList.remove("hidden");
+      devOverlay.classList.remove("hidden");
+      devError.classList.add("hidden");
+      devInput.value = "";
+      devInput.focus();
+    }
+    function closeDevModal() {
+      devModal.classList.add("hidden");
+      devOverlay.classList.add("hidden");
+    }
+    devModeBtn.addEventListener("click", openDevModal);
+    devCancel.addEventListener("click", closeDevModal);
+    devOverlay.addEventListener("click", closeDevModal);
+    devInput.addEventListener("keydown", e => { if (e.key === "Enter") devSubmit.click(); });
+    devSubmit.addEventListener("click", async () => {
+      const code = devInput.value;
+      if (!code) return;
+      devSubmit.disabled = true;
+      devSubmit.textContent = "Checking...";
+      devError.classList.add("hidden");
+      try {
+        const response = await fetch("/api/dev-mode/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) throw new Error("invalid");
+        localStorage.setItem("developer_mode", "1");
+        localStorage.removeItem("demo_mode");
+        window.location.href = "/dashboard";
+      } catch {
+        devError.textContent = "Incorrect developer code.";
+        devError.classList.remove("hidden");
+      } finally {
+        devSubmit.disabled = false;
+        devSubmit.textContent = "Enable Developer Mode";
+      }
+    });
+
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") closeDemoModal();
+      if (e.key === "Escape") { closeDemoModal(); closeDevModal(); }
     });
 
     demoGoBtn.addEventListener("click", function () {
       localStorage.setItem("demo_mode", "1");
+      localStorage.removeItem("developer_mode");
       window.location.href = "/tools";
     });
   </script>
