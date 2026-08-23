@@ -501,8 +501,8 @@ app.post("/api/ai/enhance-citation", async (req, res) => {
 // ── Developer Mode ─────────────────────────────────────────────────────
 // The secret code is server-side only. It is never sent to the browser.
 app.post("/api/dev-mode/verify", (req, res) => {
-  const expected = process.env.DEV_API_CODE;
-  const provided = typeof req.body?.code === "string" ? req.body.code : "";
+  const expected = typeof process.env.DEV_API_CODE === "string" ? process.env.DEV_API_CODE.trim() : "";
+  const provided = typeof req.body?.code === "string" ? req.body.code.trim() : "";
 
   if (!hasConfigValue(expected)) {
     return res.status(503).json({ success: false, error: "Developer mode is not configured." });
