@@ -143,7 +143,7 @@
     devOverlay.addEventListener("click", closeDevModal);
     devInput.addEventListener("keydown", e => { if (e.key === "Enter") devSubmit.click(); });
     devSubmit.addEventListener("click", async () => {
-      const code = devInput.value;
+      const code = devInput.value.trim();
       if (!code) return;
       devSubmit.disabled = true;
       devSubmit.textContent = "Checking...";
