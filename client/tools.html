@@ -8,101 +8,20 @@
   <script src="theme-loader.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
-    .tools-page {
-      padding: 40px;
-      min-height: 100vh;
-      background: var(--page-bg);
-    }
-
-    .tools-header {
-      margin-bottom: 32px;
-    }
-
-    .tools-header h1 {
-      margin: 0 0 6px;
-      color: var(--text-primary);
-      font-size: 28px;
-    }
-
-    .tools-header p {
-      margin: 0;
-      color: var(--text-muted);
-      font-size: 15px;
-    }
-
-    .tools-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
-    }
-
-    .tool-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 24px;
-      text-decoration: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-      transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .tool-card::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--tool-accent, #3b82f6);
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-
-    .tool-card:hover {
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-      transform: translateY(-2px);
-      border-color: var(--tool-accent, #3b82f6);
-    }
-
-    .tool-card:hover::before {
-      opacity: 1;
-    }
-
-    .tool-card-icon {
-      font-size: 28px;
-      line-height: 1;
-    }
-
-    .tool-card-name {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .tool-card-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.55;
-      margin: 0;
-      flex: 1;
-    }
-
-    .tool-card-arrow {
-      font-size: 18px;
-      color: var(--tool-accent, #3b82f6);
-      align-self: flex-end;
-      opacity: 0;
-      transition: opacity 0.15s, transform 0.15s;
-    }
-
-    .tool-card:hover .tool-card-arrow {
-      opacity: 1;
-      transform: translateX(3px);
-    }
+    .tools-page { padding: 40px; min-height: 100vh; background: var(--page-bg); }
+    .tools-header { margin-bottom: 32px; }
+    .tools-header h1 { margin: 0 0 6px; color: var(--text-primary); font-size: 28px; }
+    .tools-header p { margin: 0; color: var(--text-muted); font-size: 15px; }
+    .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+    .tool-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; text-decoration: none; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.05); transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s; position: relative; overflow: hidden; }
+    .tool-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--tool-accent, #3b82f6); opacity: 0; transition: opacity 0.15s; }
+    .tool-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); border-color: var(--tool-accent, #3b82f6); }
+    .tool-card:hover::before { opacity: 1; }
+    .tool-card-icon { font-size: 28px; line-height: 1; }
+    .tool-card-name { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .tool-card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0; flex: 1; }
+    .tool-card-arrow { font-size: 18px; color: var(--tool-accent, #3b82f6); align-self: flex-end; opacity: 0; transition: opacity 0.15s, transform 0.15s; }
+    .tool-card:hover .tool-card-arrow { opacity: 1; transform: translateX(3px); }
   </style>
 </head>
 <body>
@@ -137,9 +56,8 @@
         accent: "#2563eb",
       },
       { icon:"🔢", name:"Calculators", desc:"Basic, scientific, graphing, geometry, unit conversion, percentages and fractions — all your maths needs in one place.", href:"/calculators", accent:"#6366f1" },
-      { icon:"🔎", name:"Google API Status", desc:"Debug OAuth configuration, requested scopes, live Classroom, Calendar, Drive and Gemini health checks, plus raw server diagnostics.", href:"/google-api-status", accent:"#0ea5e9" },
       { icon:"🗂️", name:"Organisation", desc:"Assignment tracker, grade calculator and schedule builder — all integrated with your Google Classroom data.", href:"/organisation", accent:"#10b981" },
-      // Add more tools here as you build them
+      // Developer-only pages are intentionally not listed here.
     ];
 
     const grid = document.getElementById("tools-grid");
