@@ -2,7 +2,6 @@ const params = new URLSearchParams(window.location.search);
 const urlToken = params.get("token");
 const savedToken = localStorage.getItem("access_token");
 const token = urlToken || savedToken;
-const developerMode = localStorage.getItem("developer_mode") === "1";
 
 if (urlToken) {
   localStorage.setItem("access_token", urlToken);
@@ -146,13 +145,6 @@ function renderMonth() {
 }
 
 async function loadCalendarEvents() {
-  if (developerMode && !token) {
-    if (loader) loader.classList.add("hidden");
-    allEvents = [];
-    renderMonth();
-    return;
-  }
-
   if (loader) loader.classList.remove("hidden");
 
   try {
@@ -197,7 +189,7 @@ function setupMonthControls() {
   });
 }
 
-if (!token && localStorage.getItem("demo_mode") !== "1" && !developerMode) {
+if (!token && localStorage.getItem("demo_mode") !== "1") {
   window.location.href = "/";
 } else {
   setupSidebar();
