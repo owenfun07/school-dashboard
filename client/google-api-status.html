@@ -8,237 +8,51 @@
   <script src="theme-loader.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
-    .status-page {
-      min-height: 100vh;
-      padding: 40px;
-      background: var(--page-bg);
-      color: var(--text-primary);
-    }
+    .status-page { min-height: 100vh; padding: 40px; background: var(--page-bg); color: var(--text-primary); }
+    .status-shell { max-width: 1180px; margin: 0 auto; }
+    .status-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 24px; }
+    .status-eyebrow { margin: 0 0 8px; color: var(--text-muted); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .status-header h1 { margin: 0 0 8px; font-size: 30px; }
+    .status-header p { margin: 0; max-width: 720px; color: var(--text-secondary); line-height: 1.55; }
+    .status-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .status-button { border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--text-primary); border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .status-button:hover { background: var(--btn-hover-bg); text-decoration: none; }
+    .status-button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .debug-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+    .debug-stat, .status-panel, .service-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+    .debug-stat { padding: 16px; }
+    .debug-stat-label { color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .debug-stat-value { font-size: 22px; font-weight: 800; word-break: break-word; }
+    .status-panel { padding: 18px; margin-bottom: 18px; }
+    .status-panel h2 { margin: 0 0 12px; font-size: 18px; }
+    .service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .service-card { padding: 18px; border-left: 5px solid var(--status-accent, #64748b); }
+    .service-card h3 { margin: 0 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 16px; }
+    .service-card p { margin: 0 0 12px; color: var(--text-secondary); line-height: 1.45; font-size: 13px; }
+    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; font-weight: 800; white-space: nowrap; background: #e2e8f0; color: #334155; }
+    .badge.ok, .badge.configured { background: #dcfce7; color: #166534; }
+    .badge.error, .badge.missing_config { background: #fee2e2; color: #991b1b; }
+    .badge.skipped, .badge.needs_token, .badge.pending { background: #fef3c7; color: #92400e; }
+    .scope-list { margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .scope-list li, .debug-line { color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+    .checks-list { display: flex; flex-direction: column; gap: 12px; }
+    .check-row { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; background: rgba(148, 163, 184, 0.06); }
+    .check-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .check-title { font-weight: 800; }
+    .debug-json { margin: 0; padding: 12px; border-radius: 10px; background: #0f172a; color: #dbeafe; overflow: auto; font-size: 12px; line-height: 1.5; max-height: 320px; }
+    .hidden { display: none !important; }
 
-    .status-shell {
-      max-width: 1180px;
-      margin: 0 auto;
-    }
-
-    .status-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-start;
-      margin-bottom: 24px;
-    }
-
-    .status-eyebrow {
-      margin: 0 0 8px;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .status-header h1 {
-      margin: 0 0 8px;
-      font-size: 30px;
-    }
-
-    .status-header p {
-      margin: 0;
-      max-width: 720px;
-      color: var(--text-secondary);
-      line-height: 1.55;
-    }
-
-    .status-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .status-button {
-      border: 1px solid var(--btn-border);
-      background: var(--btn-bg);
-      color: var(--text-primary);
-      border-radius: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 700;
-      text-decoration: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-
-    .status-button:hover {
-      background: var(--btn-hover-bg);
-      text-decoration: none;
-    }
-
-    .status-button.primary {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #fff;
-    }
-
-    .debug-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
-    .debug-stat,
-    .status-panel,
-    .service-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-    }
-
-    .debug-stat {
-      padding: 16px;
-    }
-
-    .debug-stat-label {
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 8px;
-    }
-
-    .debug-stat-value {
-      font-size: 22px;
-      font-weight: 800;
-      word-break: break-word;
-    }
-
-    .status-panel {
-      padding: 18px;
-      margin-bottom: 18px;
-    }
-
-    .status-panel h2 {
-      margin: 0 0 12px;
-      font-size: 18px;
-    }
-
-    .service-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-
-    .service-card {
-      padding: 18px;
-      border-left: 5px solid var(--status-accent, #64748b);
-    }
-
-    .service-card h3 {
-      margin: 0 0 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 16px;
-    }
-
-    .service-card p {
-      margin: 0 0 12px;
-      color: var(--text-secondary);
-      line-height: 1.45;
-      font-size: 13px;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 4px 9px;
-      font-size: 12px;
-      font-weight: 800;
-      white-space: nowrap;
-      background: #e2e8f0;
-      color: #334155;
-    }
-
-    .badge.ok,
-    .badge.configured {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .badge.error,
-    .badge.missing_config {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .badge.skipped,
-    .badge.needs_token,
-    .badge.pending {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .scope-list {
-      margin: 10px 0 0;
-      padding: 0;
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .scope-list li,
-    .debug-line {
-      color: var(--text-muted);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
-      overflow-wrap: anywhere;
-    }
-
-    .checks-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .check-row {
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 14px;
-      background: rgba(148, 163, 184, 0.06);
-    }
-
-    .check-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .check-title {
-      font-weight: 800;
-    }
-
-    .debug-json {
-      margin: 0;
-      padding: 12px;
-      border-radius: 10px;
-      background: #0f172a;
-      color: #dbeafe;
-      overflow: auto;
-      font-size: 12px;
-      line-height: 1.5;
-      max-height: 320px;
-    }
-
-    .hidden {
-      display: none !important;
-    }
+    /* Developer-only access prompt */
+    .dev-gate-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); }
+    .dev-gate-card { width: min(430px, 100%); box-sizing: border-box; padding: 28px; border-radius: 18px; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: 0 20px 60px rgba(0,0,0,0.25); text-align: center; }
+    .dev-gate-card h2 { margin: 0 0 8px; color: var(--text-primary); }
+    .dev-gate-card p { margin: 0 0 18px; color: var(--text-secondary); line-height: 1.5; }
+    .dev-gate-input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color, #ccc); background: var(--input-bg, #fff); color: var(--text-primary, #111); font-size: 16px; text-align: center; letter-spacing: 0.12em; }
+    .dev-gate-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .dev-gate-actions button { flex: 1; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--btn-border); cursor: pointer; font-weight: 700; }
+    .dev-gate-submit { background: #2563eb; border-color: #2563eb !important; color: #fff; }
+    .dev-gate-cancel { background: var(--btn-bg); color: var(--text-primary); }
+    .dev-gate-error { margin: 10px 0 0 !important; color: #dc2626 !important; font-size: 13px; }
 
     @media (max-width: 850px) {
       .status-page { padding: 28px 18px; }
@@ -246,10 +60,7 @@
       .status-actions { justify-content: flex-start; }
       .debug-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-
-    @media (max-width: 520px) {
-      .debug-grid { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 520px) { .debug-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -257,7 +68,7 @@
     <main class="status-shell">
       <header class="status-header">
         <div>
-          <p class="status-eyebrow">Debug console</p>
+          <p class="status-eyebrow">Developer console</p>
           <h1>Google API Status</h1>
           <p>View configuration health, OAuth token details, and live probe results for the Google APIs used by this dashboard. Secrets and access tokens are never printed on this page.</p>
         </div>
@@ -276,9 +87,7 @@
 
       <section class="status-panel">
         <h2>Live checks</h2>
-        <div class="checks-list" id="checks-list">
-          <div class="debug-line">Loading status…</div>
-        </div>
+        <div class="checks-list" id="checks-list"><div class="debug-line">Loading status…</div></div>
       </section>
 
       <section class="status-panel">
@@ -288,6 +97,19 @@
     </main>
   </div>
 
+  <div class="dev-gate-overlay hidden" id="dev-gate-overlay">
+    <div class="dev-gate-card">
+      <h2>Developer Mode Required</h2>
+      <p>This page is only available in Developer Mode. Enter the developer access code to continue.</p>
+      <input id="dev-gate-input" class="dev-gate-input" type="password" autocomplete="off" placeholder="Developer code">
+      <p id="dev-gate-error" class="dev-gate-error hidden">Incorrect developer code.</p>
+      <div class="dev-gate-actions">
+        <button id="dev-gate-cancel" class="dev-gate-cancel" type="button">Go back</button>
+        <button id="dev-gate-submit" class="dev-gate-submit" type="button">Unlock</button>
+      </div>
+    </div>
+  </div>
+
   <script src="sidebar.js"></script>
   <script>
     const grid = document.getElementById("debug-grid");
@@ -295,6 +117,66 @@
     const checksList = document.getElementById("checks-list");
     const rawDebug = document.getElementById("raw-debug");
     const refreshButton = document.getElementById("refresh-status");
+
+    const devGate = document.getElementById("dev-gate-overlay");
+    const devInput = document.getElementById("dev-gate-input");
+    const devSubmit = document.getElementById("dev-gate-submit");
+    const devCancel = document.getElementById("dev-gate-cancel");
+    const devError = document.getElementById("dev-gate-error");
+
+    function isDeveloperMode() {
+      return localStorage.getItem("developer_mode") === "1";
+    }
+
+    function openDeveloperGate() {
+      devGate.classList.remove("hidden");
+      devError.classList.add("hidden");
+      devInput.value = "";
+      setTimeout(() => devInput.focus(), 0);
+    }
+
+    function closeDeveloperGate() {
+      devGate.classList.add("hidden");
+      window.location.href = "/tools";
+    }
+
+    async function unlockDeveloperGate() {
+      const code = devInput.value.trim();
+      if (!code) return;
+
+      devSubmit.disabled = true;
+      devSubmit.textContent = "Checking…";
+      devError.classList.add("hidden");
+
+      try {
+        const response = await fetch("/api/dev-mode/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) throw new Error("invalid");
+
+        localStorage.setItem("developer_mode", "1");
+        localStorage.setItem("demo_mode", "1");
+        localStorage.setItem("developer_mode_demo_bypass", "1");
+        devGate.classList.add("hidden");
+        loadStatus();
+      } catch {
+        devError.textContent = "Incorrect developer code.";
+        devError.classList.remove("hidden");
+        devInput.select();
+      } finally {
+        devSubmit.disabled = false;
+        devSubmit.textContent = "Unlock";
+      }
+    }
+
+    devSubmit.addEventListener("click", unlockDeveloperGate);
+    devCancel.addEventListener("click", closeDeveloperGate);
+    devInput.addEventListener("keydown", e => { if (e.key === "Enter") unlockDeveloperGate(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !devGate.classList.contains("hidden")) closeDeveloperGate(); });
 
     function getToken() {
       const params = new URLSearchParams(window.location.search);
@@ -308,12 +190,7 @@
     }
 
     function escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+      return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     function badge(status) {
@@ -321,12 +198,7 @@
     }
 
     function stat(label, value) {
-      return `
-        <div class="debug-stat">
-          <div class="debug-stat-label">${escapeHtml(label)}</div>
-          <div class="debug-stat-value">${escapeHtml(value)}</div>
-        </div>
-      `;
+      return `<div class="debug-stat"><div class="debug-stat-label">${escapeHtml(label)}</div><div class="debug-stat-value">${escapeHtml(value)}</div></div>`;
     }
 
     function renderSummary(data) {
@@ -342,22 +214,11 @@
 
     function renderServices(data) {
       serviceGrid.innerHTML = data.services.map(service => {
-        const accent = service.status === "ok" || service.status === "configured"
-          ? "#22c55e"
-          : service.status === "error" || service.status === "missing_config"
-            ? "#ef4444"
-            : "#f59e0b";
+        const accent = service.status === "ok" || service.status === "configured" ? "#22c55e" : service.status === "error" || service.status === "missing_config" ? "#ef4444" : "#f59e0b";
         const scopes = service.scopes.length
           ? `<ul class="scope-list">${service.scopes.map(scope => `<li>${escapeHtml(scope)}</li>`).join("")}</ul>`
           : `<div class="debug-line">No OAuth scopes required.</div>`;
-        return `
-          <article class="service-card" style="--status-accent:${accent}">
-            <h3>${escapeHtml(service.name)} ${badge(service.status)}</h3>
-            <p>${escapeHtml(service.description)}</p>
-            <div class="debug-line">Requires user token: ${service.requiresToken ? "yes" : "no"}</div>
-            ${scopes}
-          </article>
-        `;
+        return `<article class="service-card" style="--status-accent:${accent}"><h3>${escapeHtml(service.name)} ${badge(service.status)}</h3><p>${escapeHtml(service.description)}</p><div class="debug-line">Requires user token: ${service.requiresToken ? "yes" : "no"}</div>${scopes}</article>`;
       }).join("");
     }
 
@@ -366,7 +227,6 @@
         checksList.innerHTML = `<div class="debug-line">No checks have run yet.</div>`;
         return;
       }
-
       checksList.innerHTML = data.checks.map(check => `
         <article class="check-row">
           <div class="check-top">
@@ -382,6 +242,11 @@
     }
 
     async function loadStatus() {
+      if (!isDeveloperMode()) {
+        openDeveloperGate();
+        return;
+      }
+
       refreshButton.disabled = true;
       refreshButton.textContent = "Checking…";
       checksList.innerHTML = `<div class="debug-line">Running live checks…</div>`;
@@ -390,8 +255,12 @@
         const token = getToken();
         const url = token ? `/api/google/status?token=${encodeURIComponent(token)}` : "/api/google/status";
         const resp = await fetch(url);
+        if (resp.status === 403) {
+          localStorage.removeItem("developer_mode");
+          openDeveloperGate();
+          return;
+        }
         const data = await resp.json();
-
         renderSummary(data);
         renderServices(data);
         renderChecks(data);
