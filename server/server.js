@@ -499,22 +499,43 @@ app.post("/api/ai/enhance-citation", async (req, res) => {
 });
 
 // ── Developer Mode ─────────────────────────────────────────────────────
-// The secret code is server-side only. It is never sent to the browser.
-app.post("/api/dev-mode/verify", (req, res) => {
-  const expected = typeof process.env.DEV_API_CODE === "string" ? process.env.DEV_API_CODE.trim() : "";
+// DEV_API_CODE is the secret API key for the Google Apps Script.
+// The current developer code is fetched server-side from that script.
+const DEV_API_BASE_URL = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhVn5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
+
+app.post("/api/dev-mode/verify", async (req, res) => {
+  const apiKey = typeof process.env.DEV_API_CODE === "string" ? process.env.DEV_API_CODE.trim() : "";
   const provided = typeof req.body?.code === "string" ? req.body.code.trim() : "";
 
-  if (!hasConfigValue(expected)) {
+  if (!hasConfigValue(apiKey)) {
     return res.status(503).json({ success: false, error: "Developer mode is not configured." });
   }
 
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(provided);
-  const valid = expectedBuffer.length === providedBuffer.length &&
-    crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+  if (!provided) {
+    return res.status(400).json({ success: false, error: "Developer code is required." });
+  }
 
-  if (!valid) return res.status(401).json({ success: false, error: "Invalid developer code." });
-  return res.json({ success: true });
+  try {
+    const apiUrl = `${DEV_API_BASE_URL}?key=${encodeURIComponent(apiKey)}`;
+    const response = await fetch(apiUrl, { redirect: "follow" });
+    const activeCode = (await response.text()).trim();
+
+    if (!response.ok || !activeCode || activeCode.includes("Unauthorized")) {
+      console.error("Developer code API fetch failed:", response.status);
+      return res.status(503).json({ success: false, error: "Developer verification service unavailable." });
+    }
+
+    const expectedBuffer = Buffer.from(activeCode);
+    const providedBuffer = Buffer.from(provided);
+    const valid = expectedBuffer.length === providedBuffer.length &&
+      crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+
+    if (!valid) return res.status(401).json({ success: false, error: "Invalid developer code." });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Developer code API error:", err);
+    return res.status(503).json({ success: false, error: "Developer verification service unavailable." });
+  }
 });
 
 // ── Page routes ─────────────────────────────────────────────────────────
