@@ -40,6 +40,11 @@
     .check-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
     .check-title { font-weight: 800; }
     .debug-json { margin: 0; padding: 12px; border-radius: 10px; background: #0f172a; color: #dbeafe; overflow: auto; font-size: 12px; line-height: 1.5; max-height: 320px; }
+    .grounding-result { padding: 14px; border-radius: 12px; background: rgba(148, 163, 184, 0.06); border: 1px solid var(--card-border); }
+    .grounding-result h3 { margin: 0 0 8px; font-size: 16px; }
+    .grounding-result p { margin: 6px 0; color: var(--text-secondary); line-height: 1.45; font-size: 13px; }
+    .grounding-sources { margin: 10px 0 0; padding-left: 20px; }
+    .grounding-sources li { margin: 5px 0; font-size: 13px; overflow-wrap: anywhere; }
     .hidden { display: none !important; }
 
     /* Developer-only access prompt */
@@ -54,12 +59,7 @@
     .dev-gate-cancel { background: var(--btn-bg); color: var(--text-primary); }
     .dev-gate-error { margin: 10px 0 0 !important; color: #dc2626 !important; font-size: 13px; }
 
-    @media (max-width: 850px) {
-      .status-page { padding: 28px 18px; }
-      .status-header { flex-direction: column; }
-      .status-actions { justify-content: flex-start; }
-      .debug-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
+    @media (max-width: 850px) { .status-page { padding: 28px 18px; } .status-header { flex-direction: column; } .status-actions { justify-content: flex-start; } .debug-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 520px) { .debug-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -83,6 +83,13 @@
       <section class="status-panel">
         <h2>Services in this project</h2>
         <div class="service-grid" id="service-grid"></div>
+      </section>
+
+      <section class="status-panel">
+        <h2>Google Search grounding test</h2>
+        <p style="color:var(--text-secondary);line-height:1.5;margin-top:0;">This diagnostic uses the same Source Citation endpoint that attempts Google Search grounding. It does not expose your Gemini API key. A successful result with sources confirms that the grounding path is working; an unavailable result means the backend could not obtain grounded sources.</p>
+        <button class="status-button primary" id="grounding-test-button" type="button">Run grounding test</button>
+        <div id="grounding-test-result" class="grounding-result" style="margin-top:14px;">Not tested yet.</div>
       </section>
 
       <section class="status-panel">
@@ -117,6 +124,8 @@
     const checksList = document.getElementById("checks-list");
     const rawDebug = document.getElementById("raw-debug");
     const refreshButton = document.getElementById("refresh-status");
+    const groundingButton = document.getElementById("grounding-test-button");
+    const groundingResult = document.getElementById("grounding-test-result");
 
     const devGate = document.getElementById("dev-gate-overlay");
     const devInput = document.getElementById("dev-gate-input");
@@ -124,156 +133,83 @@
     const devCancel = document.getElementById("dev-gate-cancel");
     const devError = document.getElementById("dev-gate-error");
 
-    function isDeveloperMode() {
-      return localStorage.getItem("developer_mode") === "1";
-    }
-
-    function openDeveloperGate() {
-      devGate.classList.remove("hidden");
-      devError.classList.add("hidden");
-      devInput.value = "";
-      setTimeout(() => devInput.focus(), 0);
-    }
-
-    function closeDeveloperGate() {
-      devGate.classList.add("hidden");
-      window.location.href = "/tools";
-    }
+    function isDeveloperMode() { return localStorage.getItem("developer_mode") === "1"; }
+    function openDeveloperGate() { devGate.classList.remove("hidden"); devError.classList.add("hidden"); devInput.value = ""; setTimeout(() => devInput.focus(), 0); }
+    function closeDeveloperGate() { devGate.classList.add("hidden"); window.location.href = "/tools"; }
 
     async function unlockDeveloperGate() {
-      const code = devInput.value.trim();
-      if (!code) return;
-
-      devSubmit.disabled = true;
-      devSubmit.textContent = "Checking…";
-      devError.classList.add("hidden");
-
+      const code = devInput.value.trim(); if (!code) return;
+      devSubmit.disabled = true; devSubmit.textContent = "Checking…"; devError.classList.add("hidden");
       try {
-        const response = await fetch("/api/dev-mode/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code })
-        });
+        const response = await fetch("/api/dev-mode/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
         const data = await response.json().catch(() => ({}));
-
         if (!response.ok || !data.success) throw new Error("invalid");
-
-        localStorage.setItem("developer_mode", "1");
-        localStorage.setItem("demo_mode", "1");
-        localStorage.setItem("developer_mode_demo_bypass", "1");
-        devGate.classList.add("hidden");
-        loadStatus();
-      } catch {
-        devError.textContent = "Incorrect developer code.";
-        devError.classList.remove("hidden");
-        devInput.select();
-      } finally {
-        devSubmit.disabled = false;
-        devSubmit.textContent = "Unlock";
-      }
+        localStorage.setItem("developer_mode", "1"); localStorage.setItem("demo_mode", "1"); localStorage.setItem("developer_mode_demo_bypass", "1");
+        devGate.classList.add("hidden"); loadStatus();
+      } catch { devError.textContent = "Incorrect developer code."; devError.classList.remove("hidden"); devInput.select(); }
+      finally { devSubmit.disabled = false; devSubmit.textContent = "Unlock"; }
     }
+    devSubmit.addEventListener("click", unlockDeveloperGate); devCancel.addEventListener("click", closeDeveloperGate); devInput.addEventListener("keydown", e => { if (e.key === "Enter") unlockDeveloperGate(); }); document.addEventListener("keydown", e => { if (e.key === "Escape" && !devGate.classList.contains("hidden")) closeDeveloperGate(); });
 
-    devSubmit.addEventListener("click", unlockDeveloperGate);
-    devCancel.addEventListener("click", closeDeveloperGate);
-    devInput.addEventListener("keydown", e => { if (e.key === "Enter") unlockDeveloperGate(); });
-    document.addEventListener("keydown", e => { if (e.key === "Escape" && !devGate.classList.contains("hidden")) closeDeveloperGate(); });
-
-    function getToken() {
-      const params = new URLSearchParams(window.location.search);
-      const queryToken = params.get("token");
-      if (queryToken) {
-        localStorage.setItem("access_token", queryToken);
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return queryToken;
-      }
-      return localStorage.getItem("access_token") || "";
-    }
-
-    function escapeHtml(value) {
-      return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
-    }
-
-    function badge(status) {
-      return `<span class="badge ${escapeHtml(status)}">${escapeHtml(status.replace(/_/g, " "))}</span>`;
-    }
-
-    function stat(label, value) {
-      return `<div class="debug-stat"><div class="debug-stat-label">${escapeHtml(label)}</div><div class="debug-stat-value">${escapeHtml(value)}</div></div>`;
-    }
+    function getToken() { const params = new URLSearchParams(window.location.search); const queryToken = params.get("token"); if (queryToken) { localStorage.setItem("access_token", queryToken); window.history.replaceState({}, document.title, window.location.pathname); return queryToken; } return localStorage.getItem("access_token") || ""; }
+    function escapeHtml(value) { return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"); }
+    function badge(status) { return `<span class="badge ${escapeHtml(status)}">${escapeHtml(status.replace(/_/g, " "))}</span>`; }
+    function stat(label, value) { return `<div class="debug-stat"><div class="debug-stat-label">${escapeHtml(label)}</div><div class="debug-stat-value">${escapeHtml(value)}</div></div>`; }
 
     function renderSummary(data) {
-      const okChecks = data.checks.filter(check => check.status === "ok").length;
-      const errorChecks = data.checks.filter(check => check.status === "error").length;
-      grid.innerHTML = [
-        stat("OAuth config", data.oauth.configured ? "Ready" : "Missing"),
-        stat("Access token", data.oauth.tokenProvided ? "Provided" : "Not found"),
-        stat("Live checks", `${okChecks} ok / ${errorChecks} errors`),
-        stat("Server uptime", `${data.server.uptimeSeconds}s`),
-      ].join("");
+      const okChecks = data.checks.filter(check => check.status === "ok").length; const errorChecks = data.checks.filter(check => check.status === "error").length;
+      grid.innerHTML = [stat("OAuth config", data.oauth.configured ? "Ready" : "Missing"), stat("Access token", data.oauth.tokenProvided ? "Provided" : "Not found"), stat("Live checks", `${okChecks} ok / ${errorChecks} errors`), stat("Server uptime", `${data.server.uptimeSeconds}s`)].join("");
     }
-
     function renderServices(data) {
       serviceGrid.innerHTML = data.services.map(service => {
         const accent = service.status === "ok" || service.status === "configured" ? "#22c55e" : service.status === "error" || service.status === "missing_config" ? "#ef4444" : "#f59e0b";
-        const scopes = service.scopes.length
-          ? `<ul class="scope-list">${service.scopes.map(scope => `<li>${escapeHtml(scope)}</li>`).join("")}</ul>`
-          : `<div class="debug-line">No OAuth scopes required.</div>`;
+        const scopes = service.scopes.length ? `<ul class="scope-list">${service.scopes.map(scope => `<li>${escapeHtml(scope)}</li>`).join("")}</ul>` : `<div class="debug-line">No OAuth scopes required.</div>`;
         return `<article class="service-card" style="--status-accent:${accent}"><h3>${escapeHtml(service.name)} ${badge(service.status)}</h3><p>${escapeHtml(service.description)}</p><div class="debug-line">Requires user token: ${service.requiresToken ? "yes" : "no"}</div>${scopes}</article>`;
       }).join("");
     }
-
     function renderChecks(data) {
-      if (!data.checks.length) {
-        checksList.innerHTML = `<div class="debug-line">No checks have run yet.</div>`;
-        return;
-      }
-      checksList.innerHTML = data.checks.map(check => `
-        <article class="check-row">
-          <div class="check-top">
-            <div>
-              <div class="check-title">${escapeHtml(check.label)}</div>
-              <div class="debug-line">${escapeHtml(check.checkedAt || "not checked")}${check.latencyMs != null ? ` • ${escapeHtml(check.latencyMs)}ms` : ""}</div>
-            </div>
-            ${badge(check.status)}
-          </div>
-          <pre class="debug-json">${escapeHtml(JSON.stringify(check.data || check.error || {}, null, 2))}</pre>
-        </article>
-      `).join("");
+      if (!data.checks.length) { checksList.innerHTML = `<div class="debug-line">No checks have run yet.</div>`; return; }
+      checksList.innerHTML = data.checks.map(check => `<article class="check-row"><div class="check-top"><div><div class="check-title">${escapeHtml(check.label)}</div><div class="debug-line">${escapeHtml(check.checkedAt || "not checked")}${check.latencyMs != null ? ` • ${escapeHtml(check.latencyMs)}ms` : ""}</div></div>${badge(check.status)}</div><pre class="debug-json">${escapeHtml(JSON.stringify(check.data || check.error || {}, null, 2))}</pre></article>`).join("");
+    }
+
+    async function runGroundingTest() {
+      if (!isDeveloperMode()) { openDeveloperGate(); return; }
+      groundingButton.disabled = true; groundingButton.textContent = "Testing…"; groundingResult.textContent = "Calling the same AI citation endpoint used by Source Citation…";
+      try {
+        const response = await fetch("/api/ai/enhance-citation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: "https://www.google.com/", title: "", author: "", publisher: "", publishDate: "" }) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          groundingResult.innerHTML = `<h3>❌ Grounding test failed</h3><p>HTTP ${response.status}</p><pre class="debug-json">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+          return;
+        }
+        const ai = data.ai || {};
+        const sources = Array.isArray(ai.sources) ? ai.sources : [];
+        if (ai.mode === "grounded" && sources.length) {
+          groundingResult.innerHTML = `<h3>✅ Google Search grounding worked</h3><p>The exact Source Citation backend returned a grounded response with ${sources.length} source(s).</p><ul class="grounding-sources">${sources.map(source => `<li>${escapeHtml(source.title || source.uri)}<br><span class="debug-line">${escapeHtml(source.uri || "")}</span></li>`).join("")}</ul>`;
+        } else if (ai.warning === "google_search_grounding_unavailable") {
+          groundingResult.innerHTML = `<h3>❌ Google Search grounding is unavailable</h3><p>The normal Gemini request worked, but the grounded request failed. This confirms the failure is in the grounding attempt, not the basic Gemini connection.</p><pre class="debug-json">${escapeHtml(JSON.stringify(ai, null, 2))}</pre>`;
+        } else if (ai.attemptedGrounding === false) {
+          groundingResult.innerHTML = `<h3>⚠️ Grounding was not needed</h3><p>The standard Gemini request filled all fields before the server needed to try Search grounding. Run Source Citation with a page that leaves metadata missing if you need to force the fallback.</p>`;
+        } else {
+          groundingResult.innerHTML = `<h3>⚠️ Grounding result was inconclusive</h3><pre class="debug-json">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+        }
+      } catch (err) {
+        groundingResult.innerHTML = `<h3>❌ Grounding test request failed</h3><p>${escapeHtml(err.message)}</p>`;
+      } finally { groundingButton.disabled = false; groundingButton.textContent = "Run grounding test"; }
     }
 
     async function loadStatus() {
-      if (!isDeveloperMode()) {
-        openDeveloperGate();
-        return;
-      }
-
-      refreshButton.disabled = true;
-      refreshButton.textContent = "Checking…";
-      checksList.innerHTML = `<div class="debug-line">Running live checks…</div>`;
-
+      if (!isDeveloperMode()) { openDeveloperGate(); return; }
+      refreshButton.disabled = true; refreshButton.textContent = "Checking…"; checksList.innerHTML = `<div class="debug-line">Running live checks…</div>`;
       try {
-        const token = getToken();
-        const url = token ? `/api/google/status?token=${encodeURIComponent(token)}` : "/api/google/status";
-        const resp = await fetch(url);
-        if (resp.status === 403) {
-          localStorage.removeItem("developer_mode");
-          openDeveloperGate();
-          return;
-        }
-        const data = await resp.json();
-        renderSummary(data);
-        renderServices(data);
-        renderChecks(data);
-        rawDebug.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        checksList.innerHTML = `<div class="debug-line">Failed to load status: ${escapeHtml(err.message)}</div>`;
-        rawDebug.textContent = JSON.stringify({ error: err.message }, null, 2);
-      } finally {
-        refreshButton.disabled = false;
-        refreshButton.textContent = "Refresh checks";
-      }
+        const token = getToken(); const url = token ? `/api/google/status?token=${encodeURIComponent(token)}` : "/api/google/status"; const resp = await fetch(url);
+        if (resp.status === 403) { localStorage.removeItem("developer_mode"); openDeveloperGate(); return; }
+        const data = await resp.json(); renderSummary(data); renderServices(data); renderChecks(data); rawDebug.textContent = JSON.stringify(data, null, 2);
+      } catch (err) { checksList.innerHTML = `<div class="debug-line">Failed to load status: ${escapeHtml(err.message)}</div>`; rawDebug.textContent = JSON.stringify({ error: err.message }, null, 2); }
+      finally { refreshButton.disabled = false; refreshButton.textContent = "Refresh checks"; }
     }
 
+    groundingButton.addEventListener("click", runGroundingTest);
     refreshButton.addEventListener("click", loadStatus);
     loadStatus();
   </script>
