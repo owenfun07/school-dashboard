@@ -113,7 +113,7 @@ async function checkGeminiApi() {
   if (!hasConfigValue(apiKey)) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
-  const model = "gemini-3.5-flash-lite"; //was gemini-2.0-flash-lite
+  const model = "gemini-2.5-flash-lite"; //was gemini-2.0-flash-lite
   const geminiResp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
@@ -140,7 +140,7 @@ async function checkGeminiApi() {
 }
 
 // ── Citation AI helpers ─────────────────────────────────────────────────
-const CITATION_AI_MODEL = "gemini-3.5-flash-lite";
+const CITATION_AI_MODEL = "gemini-2.5-flash-lite";
 const CITATION_FIELDS   = ["title", "author", "publisher", "publishDate"];
 
 function cleanCitationValue(value) { return typeof value === "string" ? value.trim() : ""; }
