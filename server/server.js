@@ -143,7 +143,7 @@ async function checkGeminiApi() {
 
 // ── Server-side citation webpage retrieval ───────────────────────────────
 const CITATION_FETCH_TIMEOUT_MS = 12000;
-const CITATION_MAX_HTML_BYTES = 2 * 1024 * 1024;
+const CITATION_MAX_HTML_BYTES = 15 * 1024 * 1024;
 const CITATION_MAX_EXCERPT_CHARS = 8000;
 const CITATION_MAX_REDIRECTS = 5;
 
