@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Citation Debug</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .debug-page { min-height: 100vh; padding: 40px; background: var(--page-bg); color: var(--text-primary); }
+    .debug-shell { max-width: 1180px; margin: 0 auto; }
+    .debug-header { margin-bottom: 24px; }
+    .debug-eyebrow { margin: 0 0 8px; color: var(--text-muted); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .debug-header h1 { margin: 0 0 8px; font-size: 30px; }
+    .debug-header p { margin: 0; max-width: 820px; color: var(--text-secondary); line-height: 1.55; }
+    .panel { margin-bottom: 18px; padding: 18px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+    .panel h2 { margin: 0 0 12px; font-size: 18px; }
+    .url-row { display: flex; gap: 10px; }
+    .url-input { flex: 1; min-width: 0; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border-color, #ccc); border-radius: 10px; background: var(--input-bg, #fff); color: var(--text-primary); font-size: 15px; }
+    .button { border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--text-primary); border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
+    .button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .button:disabled { opacity: .6; cursor: wait; }
+    .result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .result-card { padding: 14px; border: 1px solid var(--card-border); border-radius: 12px; background: rgba(148,163,184,.06); }
+    .result-card h3 { margin: 0 0 8px; font-size: 15px; }
+    .result-card p { margin: 5px 0; color: var(--text-secondary); line-height: 1.45; font-size: 13px; }
+    .success { color: #15803d; font-weight: 800; }
+    .failure { color: #b91c1c; font-weight: 800; }
+    .warning { color: #a16207; font-weight: 800; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+    pre { margin: 0; padding: 12px; border-radius: 10px; background: #0f172a; color: #dbeafe; overflow: auto; max-height: 420px; font-size: 12px; line-height: 1.5; }
+    .metadata-list { display: grid; gap: 7px; }
+    .metadata-row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--card-border); }
+    .metadata-row:last-child { border-bottom: 0; }
+    .metadata-key { color: var(--text-muted); font-weight: 700; }
+    .hidden { display: none !important; }
+    .gate { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+    .gate-card { width: min(430px, 100%); box-sizing: border-box; padding: 28px; border-radius: 18px; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: 0 20px 60px rgba(0,0,0,.25); text-align: center; }
+    .gate-card h2 { margin: 0 0 8px; }
+    .gate-card p { margin: 0 0 18px; color: var(--text-secondary); line-height: 1.5; }
+    .gate-input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color, #ccc); background: var(--input-bg, #fff); color: var(--text-primary); font-size: 16px; text-align: center; letter-spacing: .12em; }
+    .gate-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .gate-actions button { flex: 1; }
+    .gate-error { color: #dc2626 !important; font-size: 13px; }
+    @media (max-width: 700px) { .debug-page { padding: 24px 16px; } .url-row { flex-direction: column; } .result-grid { grid-template-columns: 1fr; } .metadata-row { grid-template-columns: 1fr; gap: 3px; } }
+  </style>
+</head>
+<body>
+  <div class="debug-page">
+    <main class="debug-shell">
+      <header class="debug-header">
+        <p class="debug-eyebrow">Developer citation diagnostics</p>
+        <h1>Source Citation Debug</h1>
+        <p>This page lets you see exactly what the server retrieves from a URL and what the full Source Citation endpoint does with that retrieved data. It is developer-only and does not expose the Gemini API key.</p>
+      </header>
+
+      <section class="panel">
+        <h2>Test a webpage</h2>
+        <div class="url-row">
+          <input id="url-input" class="url-input" type="url" placeholder="https://example.com/article" autocomplete="off" value="https://www.google.com/">
+          <button id="run-button" class="button primary" type="button">Run diagnostic</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>What happened?</h2>
+        <div id="summary">No test has been run yet.</div>
+        <div id="result-grid" class="result-grid" style="margin-top:14px;"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Server webpage retrieval</h2>
+        <div id="fetch-result">Not tested yet.</div>
+        <div style="margin-top:12px;"><pre id="fetch-json">No response yet.</pre></div>
+      </section>
+
+      <section class="panel">
+        <h2>Full Source Citation pipeline</h2>
+        <div id="pipeline-result">Not tested yet.</div>
+        <div style="margin-top:12px;"><pre id="pipeline-json">No response yet.</pre></div>
+      </section>
+
+      <section class="panel">
+        <h2>Extracted webpage metadata</h2>
+        <div id="metadata">No metadata yet.</div>
+      </section>
+    </main>
+  </div>
+
+  <div id="gate" class="gate hidden">
+    <div class="gate-card">
+      <h2>Developer Mode Required</h2>
+      <p>This diagnostic is only available in Developer Mode. Enter the developer access code to continue.</p>
+      <input id="gate-input" class="gate-input" type="password" autocomplete="off" placeholder="Developer code">
+      <p id="gate-error" class="gate-error hidden">Incorrect developer code.</p>
+      <div class="gate-actions">
+        <button id="gate-cancel" class="button" type="button">Go back</button>
+        <button id="gate-submit" class="button primary" type="button">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const gate = document.getElementById('gate');
+    const gateInput = document.getElementById('gate-input');
+    const gateSubmit = document.getElementById('gate-submit');
+    const gateCancel = document.getElementById('gate-cancel');
+    const gateError = document.getElementById('gate-error');
+    const urlInput = document.getElementById('url-input');
+    const runButton = document.getElementById('run-button');
+    const summary = document.getElementById('summary');
+    const resultGrid = document.getElementById('result-grid');
+    const fetchResult = document.getElementById('fetch-result');
+    const fetchJson = document.getElementById('fetch-json');
+    const pipelineResult = document.getElementById('pipeline-result');
+    const pipelineJson = document.getElementById('pipeline-json');
+    const metadata = document.getElementById('metadata');
+
+    function devMode() { return localStorage.getItem('developer_mode') === '1'; }
+    function openGate() { gate.classList.remove('hidden'); gateError.classList.add('hidden'); gateInput.value = ''; setTimeout(() => gateInput.focus(), 0); }
+    function goBack() { window.location.href = '/google-api-status'; }
+    function esc(value) { return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function json(value) { return JSON.stringify(value, null, 2); }
+
+    async function unlock() {
+      const code = gateInput.value.trim();
+      if (!code) return;
+      gateSubmit.disabled = true; gateSubmit.textContent = 'Checking…'; gateError.classList.add('hidden');
+      try {
+        const response = await fetch('/api/dev-mode/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code}) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) throw new Error('invalid');
+        localStorage.setItem('developer_mode','1');
+        localStorage.setItem('demo_mode','1');
+        localStorage.setItem('developer_mode_demo_bypass','1');
+        gate.classList.add('hidden');
+      } catch { gateError.classList.remove('hidden'); gateInput.select(); }
+      finally { gateSubmit.disabled = false; gateSubmit.textContent = 'Unlock'; }
+    }
+
+    function renderMetadata(data) {
+      const m = data?.data || data || {};
+      if (!m || !Object.keys(m).length) { metadata.textContent = 'No metadata was extracted.'; return; }
+      const evidence = m.evidence || {};
+      metadata.innerHTML = `<div class="metadata-list">
+        <div class="metadata-row"><div class="metadata-key">Final URL</div><div class="mono">${esc(m.url || '')}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Title</div><div>${esc(m.title || '(missing)')}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Author</div><div>${esc(m.author || '(missing)')}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Publisher</div><div>${esc(m.publisher || '(missing)')}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Publish date</div><div>${esc(m.publishDate || '(missing)')}</div></div>
+        <div class="metadata-row"><div class="metadata-key">JSON-LD</div><div>${evidence.jsonLdFound ? '✅ Found' : '❌ Not found'}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Open Graph</div><div>${evidence.openGraphFound ? '✅ Found' : '❌ Not found'}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Author meta</div><div>${evidence.metaAuthorFound ? '✅ Found' : '❌ Not found'}</div></div>
+        <div class="metadata-row"><div class="metadata-key">Date meta</div><div>${evidence.metaDateFound ? '✅ Found' : '❌ Not found'}</div></div>
+      </div>`;
+    }
+
+    async function runDiagnostic() {
+      if (!devMode()) { openGate(); return; }
+      const url = urlInput.value.trim();
+      if (!url) { summary.innerHTML = '<span class="failure">Enter a URL first.</span>'; return; }
+      runButton.disabled = true; runButton.textContent = 'Testing…';
+      summary.textContent = 'Running the server retrieval first, then the complete Source Citation pipeline…';
+      resultGrid.innerHTML = ''; fetchResult.textContent = 'Requesting /api/citation/fetch-metadata…'; fetchJson.textContent = 'Loading…'; pipelineResult.textContent = 'Waiting for retrieval result…'; pipelineJson.textContent = 'Waiting…'; metadata.textContent = 'Waiting…';
+
+      let direct = null;
+      let pipeline = null;
+      try {
+        const directResponse = await fetch('/api/citation/fetch-metadata', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+        direct = await directResponse.json().catch(() => ({}));
+        fetchJson.textContent = json({ httpStatus: directResponse.status, ok: directResponse.ok, response: direct });
+        if (directResponse.ok && direct.success) {
+          fetchResult.innerHTML = '<span class="success">✅ Server fetched the webpage successfully.</span><p>The response below came directly from your Render server. This is proof that the server-side retrieval endpoint ran and returned extracted metadata.</p>';
+          renderMetadata(direct);
+        } else {
+          fetchResult.innerHTML = `<span class="failure">❌ Server-side webpage retrieval failed.</span><p>${esc(direct.error || 'Unknown retrieval error.')}</p>`;
+          metadata.textContent = 'No metadata was extracted because retrieval failed.';
+        }
+      } catch (err) {
+        direct = { error: err.message };
+        fetchResult.innerHTML = `<span class="failure">❌ Could not reach the retrieval endpoint.</span><p>${esc(err.message)}</p>`;
+        fetchJson.textContent = json(direct); metadata.textContent = 'No metadata was extracted.';
+      }
+
+      try {
+        pipelineResult.textContent = 'Calling /api/ai/enhance-citation…';
+        const seed = direct?.success && direct?.data ? direct.data : {};
+        const pipelineResponse = await fetch('/api/ai/enhance-citation', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ url, title:seed.title || '', author:seed.author || '', publisher:seed.publisher || '', publishDate:seed.publishDate || '' }) });
+        pipeline = await pipelineResponse.json().catch(() => ({}));
+        pipelineJson.textContent = json({ httpStatus: pipelineResponse.status, ok: pipelineResponse.ok, response: pipeline });
+        const ai = pipeline.ai || {};
+        const retrieved = ai.webpageRetrieved === true;
+        const grounding = ai.attemptedGrounding === true;
+        if (pipelineResponse.ok) {
+          pipelineResult.innerHTML = `<span class="success">✅ Full citation endpoint responded.</span><p>AI mode: <strong>${esc(ai.mode || 'unknown')}</strong> · webpageRetrieved: <strong>${retrieved}</strong> · attemptedGrounding: <strong>${grounding}</strong>${ai.warning ? ` · warning: <strong>${esc(ai.warning)}</strong>` : ''}</p>`;
+        } else {
+          pipelineResult.innerHTML = `<span class="failure">❌ Full citation endpoint failed.</span><p>HTTP ${pipelineResponse.status}</p>`;
+        }
+      } catch (err) {
+        pipeline = { error: err.message };
+        pipelineResult.innerHTML = `<span class="failure">❌ Could not reach the citation endpoint.</span><p>${esc(err.message)}</p>`;
+        pipelineJson.textContent = json(pipeline);
+      }
+
+      const retrieved = pipeline?.ai?.webpageRetrieved === true;
+      const directWorked = direct?.success === true;
+      const groundingAttempted = pipeline?.ai?.attemptedGrounding === true;
+      summary.innerHTML = directWorked && retrieved
+        ? `<span class="success">✅ Confirmed: Source Citation is using the server-side webpage retrieval.</span><p>The direct retrieval endpoint succeeded, and the full citation response explicitly reported <strong>webpageRetrieved: true</strong>. This rules out the old client-only fallback being the only source of the data.</p>`
+        : directWorked
+          ? `<span class="warning">⚠️ Server retrieval works, but the full pipeline did not report webpageRetrieved: true.</span><p>Check the raw responses below before changing anything.</p>`
+          : `<span class="failure">❌ Server retrieval did not succeed for this URL.</span><p>The citation system may continue using supplied metadata/AI fallback behavior.</p>`;
+
+      resultGrid.innerHTML = [
+        `<div class="result-card"><h3>Direct server fetch</h3><p class="${directWorked ? 'success' : 'failure'}">${directWorked ? 'SUCCESS' : 'FAILED'}</p><p>Endpoint: <span class="mono">/api/citation/fetch-metadata</span></p></div>`,
+        `<div class="result-card"><h3>Full citation pipeline</h3><p class="${pipeline?.success ? 'success' : 'failure'}">${pipeline?.success ? 'SUCCESS' : 'FAILED'}</p><p>webpageRetrieved: <strong>${retrieved}</strong></p><p>Grounding attempted: <strong>${groundingAttempted}</strong></p></div>`
+      ].join('');
+      runButton.disabled = false; runButton.textContent = 'Run diagnostic';
+    }
+
+    gateSubmit.addEventListener('click', unlock);
+    gateCancel.addEventListener('click', goBack);
+    gateInput.addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+    runButton.addEventListener('click', runDiagnostic);
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') runDiagnostic(); });
+
+    if (!devMode()) openGate();
+  </script>
+</body>
+</html>
