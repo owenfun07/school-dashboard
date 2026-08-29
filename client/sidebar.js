@@ -41,7 +41,7 @@ const NAV = [
     label: "Tools",
     href:  "/tools",
     items: [
-      { label: "Source Citation",    href: "/placeholder-page-1" },
+      { label: "Source Citation",    href: "/source-citation.html" },
       { label: "Calculators",        href: "/calculators"        },
     ],
   },
