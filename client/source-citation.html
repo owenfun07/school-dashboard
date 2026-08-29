@@ -1,35 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Source Citation Tool</title>
+  <title>Source Citation</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
-  <script src="theme-loader.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
+    #citation-frame{width:100%;height:100%;border:0;display:block}
+    #dev-console{position:fixed;inset:7vh 5vw 7vh 5vw;background:#0b1020;color:#dbeafe;border:1px solid #334155;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.45);z-index:99999;display:none;overflow:hidden;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+    #dev-console.open{display:flex;flex-direction:column}
+    #dev-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#111827;border-bottom:1px solid #334155}
+    #dev-head strong{font-family:system-ui,sans-serif;font-size:14px}
+    #dev-close{border:0;background:transparent;color:#cbd5e1;font-size:20px;cursor:pointer}
+    #dev-log{padding:14px;overflow:auto;white-space:pre-wrap;flex:1}
+    .log-info{color:#cbd5e1}.log-good{color:#86efac}.log-warn{color:#fde68a}.log-bad{color:#fca5a5}.log-accent{color:#c4b5fd}
+  </style>
 </head>
 <body>
-  <div class="dashboard">
-    <h1>Source Citation Tool</h1>
-    <div class="card">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <input id="citation-author" placeholder="Author (Last, First)">
-        <input id="citation-title" placeholder="Page or article title">
-        <input id="citation-site" placeholder="Website name">
-        <input id="citation-url" placeholder="https://example.com/page">
-        <input id="citation-date" type="date">
-      </div>
-      <div class="assignment-tabs">
-        <button id="citation-mla" class="tab-btn active">MLA</button>
-        <button id="citation-apa" class="tab-btn">APA</button>
-      </div>
-      <div style="display:flex;gap:8px;margin:10px 0;">
-        <button id="citation-generate" class="google-btn">Generate Citation</button>
-        <button id="citation-copy-all" class="tab-btn">Copy All</button>
-      </div>
-      <p id="citation-output" style="color:var(--text-secondary);font-size:14px;">Your citation will appear here.</p>
-      <ul id="citation-history"></ul>
-    </div>
-  </div>
-  <script src="sidebar.js"></script>
-  <script src="source-citation.js"></script>
+<iframe id="citation-frame" src="/placeholder-page-1.html"></iframe>
+<div id="dev-console">
+  <div id="dev-head"><strong>🛠️ Source Citation Developer Console — Ctrl+Shift+D</strong><button id="dev-close">×</button></div>
+  <div id="dev-log"></div>
+</div>
+<script>
+const frame = document.getElementById('citation-frame');
+const consoleBox = document.getElementById('dev-console');
+const logBox = document.getElementById('dev-log');
+let lastRun = null;
+function log(message, type='log-info'){const line=document.createElement('div');line.className=type;line.textContent=message;logBox.appendChild(line);logBox.scrollTop=logBox.scrollHeight;}
+function clearLog(){logBox.innerHTML='';}
+function isDev(){return localStorage.getItem('developer_mode')==='1';}
+async function ensureDev(){if(isDev())return true;const code=window.prompt('Developer Mode is required for the citation console. Enter your developer code:');if(code===null)return false;try{const r=await fetch('/api/dev-mode/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success){alert(d.error||'Invalid developer code.');return false;}localStorage.setItem('developer_mode','1');localStorage.setItem('demo_mode','1');return true;}catch(e){alert('Developer verification failed: '+e.message);return false;}}
+function openConsole(){if(!isDev())return ensureDev().then(ok=>{if(ok){clearLog();consoleBox.classList.add('open');log('Developer access verified. Waiting for a citation test…','log-good');}});clearLog();consoleBox.classList.add('open');log('Developer access verified. Waiting for a citation test…','log-good');}
+function closeConsole(){consoleBox.classList.remove('open');}
+document.getElementById('dev-close').onclick=closeConsole;
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='d'){e.preventDefault();openConsole();}if(e.key==='Escape'&&consoleBox.classList.contains('open'))closeConsole();});
+function getDoc(){return frame.contentDocument||frame.contentWindow.document;}
+function field(id){return getDoc().getElementById(id);}
+function getFields(){return{title:field('title')?.value.trim()||'',author:field('author')?.value.trim()||'',publisher:field('publisher')?.value.trim()||'',publishDate:field('publishDate')?.value.trim()||''};}
+function setField(id,value){const el=field(id);if(el&&value&&!el.value.trim()){el.value=value;return true}return false;}
+function missing(f){return['title','author','publisher','publishDate'].filter(k=>!f[k]);}
+async function runNewPipeline(target){clearLog();log('Citation test started.','log-accent');log('URL: '+target,'log-info');const sources={title:'old system/manual',author:'old system/manual',publisher:'old system/manual',publishDate:'old system/manual'};let renderData=null;try{log('1. Render server: fetching webpage…','log-info');const r=await fetch('/api/citation/fetch-metadata',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:target})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success)throw new Error(d.error||('HTTP '+r.status));renderData=d.data||{};log('✓ Render retrieval succeeded (HTTP '+r.status+').','log-good');log('  Final URL: '+(renderData.url||target),'log-info');log('  JSON-LD: '+(renderData.evidence?.jsonLdFound?'FOUND':'not found')+' | Open Graph: '+(renderData.evidence?.openGraphFound?'FOUND':'not found')+' | Author meta: '+(renderData.evidence?.metaAuthorFound?'FOUND':'not found')+' | Date meta: '+(renderData.evidence?.metaDateFound?'FOUND':'not found'),'log-info');for(const k of['title','author','publisher','publishDate'])if(renderData[k]&&setField(k,renderData[k]))sources[k]='Render webpage';}catch(e){log('✗ Render retrieval failed: '+e.message,'log-warn');log('→ Allowing the existing/old citation system to run unchanged.','log-accent');lastRun={render:false,sources};return false;}
+let current=getFields();const miss=missing(current);log('2. Render supplied '+(4-miss.length)+'/4 citation fields.','log-good');if(miss.length===0){log('✓ All fields came directly from the webpage. Gemini was NOT used.','log-good');log('3. Final field sources:','log-accent');Object.entries(sources).forEach(([k,v])=>log('  '+k+': '+v,'log-info'));lastRun={render:true,renderData,sources,gemini:false,old:false};return true;}
+const autoAI=frame.contentWindow.localStorage.getItem('citation_ai_pref')!=='off';if(!autoAI){log('2. Missing fields: '+miss.join(', '),'log-warn');log('→ Auto AI is off, so no Gemini request was made.','log-info');log('→ Render succeeded; remaining fields can be filled manually.','log-info');lastRun={render:true,renderData,sources,gemini:false,old:false};return true;}
+log('3. Gemini: asking the existing server AI endpoint to fill missing fields using the webpage evidence…','log-info');try{const r=await fetch('/api/ai/enhance-citation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...current,url:target})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success)throw new Error(d.error||('HTTP '+r.status));const ai=d.ai||{};log('✓ Gemini endpoint responded. Mode: '+(ai.mode||'unknown')+' | webpageRetrieved: '+Boolean(ai.webpageRetrieved)+' | grounding attempted: '+Boolean(ai.attemptedGrounding),'log-good');if(ai.warning)log('  Warning: '+ai.warning,'log-warn');if(Array.isArray(ai.sources)&&ai.sources.length)log('  Grounding sources: '+ai.sources.map(s=>s.title||s.uri).join(' | '),'log-info');const before=getFields(),result=d.data||{};for(const k of['title','author','publisher','publishDate'])if(!before[k]&&result[k]&&setField(k,result[k]))sources[k]=ai.mode==='grounded'?'Gemini + Google Search grounding':'Gemini';const after=getFields();log('4. Final field sources:','log-accent');Object.entries(sources).forEach(([k,v])=>log('  '+k+': '+v,'log-info'));const remaining=missing(after);if(remaining.length)log('  Still missing: '+remaining.join(', '),'log-warn');lastRun={render:true,renderData,sources,gemini:true,ai,old:false};return true;}catch(e){log('✗ Gemini step failed: '+e.message,'log-warn');log('→ Render data remains in the form. No old fallback was needed because Render succeeded.','log-info');lastRun={render:true,renderData,sources,gemini:true,old:false};return true;}}
+function installHook(){const doc=getDoc(),btn=doc.getElementById('generateBtn');if(!btn){setTimeout(installHook,100);return;}btn.addEventListener('click',async function(e){const target=doc.getElementById('urlInput')?.value.trim();if(!target)return;const handled=await runNewPipeline(target);if(handled){e.preventDefault();e.stopImmediatePropagation();}},true);log('Citation console ready. The new Render-first hook is installed.','log-info');}
+frame.addEventListener('load',installHook);
+</script>
 </body>
 </html>
