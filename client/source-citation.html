@@ -18,7 +18,7 @@
 <body>
 <iframe id="citation-frame" src="/placeholder-page-1.html"></iframe>
 <div id="dev-console">
-  <div id="dev-head"><strong>🛠️ Source Citation Developer Console — Ctrl+Shift+D</strong><button id="dev-close">×</button></div>
+  <div id="dev-head"><strong>🛠️ Source Citation Developer Console — Ctrl+Shift+E</strong><button id="dev-close">×</button></div>
   <div id="dev-log"></div>
 </div>
 <script>
@@ -33,7 +33,7 @@ async function ensureDev(){if(isDev())return true;const code=window.prompt('Deve
 function openConsole(){if(!isDev())return ensureDev().then(ok=>{if(ok){clearLog();consoleBox.classList.add('open');log('Developer access verified. Waiting for a citation test…','log-good');}});clearLog();consoleBox.classList.add('open');log('Developer access verified. Waiting for a citation test…','log-good');}
 function closeConsole(){consoleBox.classList.remove('open');}
 document.getElementById('dev-close').onclick=closeConsole;
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='d'){e.preventDefault();openConsole();}if(e.key==='Escape'&&consoleBox.classList.contains('open'))closeConsole();});
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='e'){e.preventDefault();openConsole();}if(e.key==='Escape'&&consoleBox.classList.contains('open'))closeConsole();});
 function getDoc(){return frame.contentDocument||frame.contentWindow.document;}
 function field(id){return getDoc().getElementById(id);}
 function getFields(){return{title:field('title')?.value.trim()||'',author:field('author')?.value.trim()||'',publisher:field('publisher')?.value.trim()||'',publishDate:field('publishDate')?.value.trim()||''};}
