@@ -66,6 +66,13 @@ const GOOGLE_API_SERVICES = [
     scopes: [],
     requiresToken: false,
   },
+  {
+    key: "google-books",
+    name: "Google Books API",
+    description: "Looks up book editions and bibliographic metadata for citations.",
+    scopes: [],
+    requiresToken: false,
+  },
 ];
 
 function hasConfigValue(value) {
@@ -84,6 +91,7 @@ function getEnvStatus() {
     clientSecret: { configured: hasConfigValue(CLIENT_SECRET) },
     redirectUri:  { configured: hasConfigValue(REDIRECT_URI),             value: REDIRECT_URI || null },
     geminiApiKey: { configured: hasConfigValue(process.env.GEMINI_API_KEY) },
+    googleBooksApiKey: { configured: hasConfigValue(process.env.GOOGLE_BOOKS_API_KEY) },
   };
 }
 
@@ -321,6 +329,182 @@ function extractCitationMetadata(html, finalUrl) {
     },
   };
 }
+
+// ── Book citation lookup ──────────────────────────────────────────────────
+function cleanBookText(value) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+}
+
+function normalizeBookIsbn(value) {
+  return String(value || "").replace(/[^0-9Xx]/g, "").toUpperCase();
+}
+
+function normalizeBookResult(book, source, confidence = "verified") {
+  const info = book || {};
+  const identifiers = Array.isArray(info.industryIdentifiers) ? info.industryIdentifiers : [];
+  const isbn13 = identifiers.find(i => i.type === "ISBN_13")?.identifier || "";
+  const isbn10 = identifiers.find(i => i.type === "ISBN_10")?.identifier || "";
+  const authors = Array.isArray(info.authors) ? info.authors.map(cleanBookText).filter(Boolean) : [];
+  return {
+    source,
+    confidence,
+    title: cleanBookText(info.title),
+    subtitle: cleanBookText(info.subtitle),
+    authors,
+    author: authors.join(", "),
+    publisher: cleanBookText(info.publisher),
+    publishDate: cleanBookText(info.publishedDate),
+    description: cleanBookText(info.description),
+    isbn10: normalizeBookIsbn(isbn10),
+    isbn13: normalizeBookIsbn(isbn13),
+    pageCount: Number.isFinite(Number(info.pageCount)) ? Number(info.pageCount) : null,
+    categories: Array.isArray(info.categories) ? info.categories.map(cleanBookText).filter(Boolean) : [],
+    cover: cleanBookText(info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail),
+    previewLink: cleanBookText(info.previewLink),
+  };
+}
+
+function normalizeOpenLibraryResult(doc) {
+  const isbns = Array.isArray(doc.isbn) ? doc.isbn : [];
+  const isbn13 = isbns.find(v => normalizeBookIsbn(v).length === 13) || "";
+  const isbn10 = isbns.find(v => normalizeBookIsbn(v).length === 10) || "";
+  const authors = Array.isArray(doc.author_name) ? doc.author_name.map(cleanBookText).filter(Boolean) : [];
+  return {
+    source: "open-library",
+    confidence: "verified",
+    title: cleanBookText(doc.title),
+    subtitle: "",
+    authors,
+    author: authors.join(", "),
+    publisher: cleanBookText(Array.isArray(doc.publisher) ? doc.publisher[0] : doc.publisher),
+    publishDate: doc.first_publish_year ? String(doc.first_publish_year) : "",
+    description: "",
+    isbn10: normalizeBookIsbn(isbn10),
+    isbn13: normalizeBookIsbn(isbn13),
+    pageCount: null,
+    categories: Array.isArray(doc.subject) ? doc.subject.slice(0, 8).map(cleanBookText).filter(Boolean) : [],
+    cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : "",
+    previewLink: doc.key ? `https://openlibrary.org${doc.key}` : "",
+  };
+}
+
+function buildBookSearchQuery(query, author, isbn) {
+  const cleanQuery = cleanBookText(query);
+  const cleanAuthor = cleanBookText(author);
+  const cleanIsbn = normalizeBookIsbn(isbn);
+  if (cleanIsbn) return `isbn:${encodeURIComponent(cleanIsbn)}`;
+  let result = cleanQuery;
+  if (cleanAuthor) result += ` inauthor:${cleanAuthor}`;
+  return result.trim();
+}
+
+async function searchGoogleBooks({ query, author = "", isbn = "" }) {
+  const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+  if (!hasConfigValue(apiKey)) throw new Error("GOOGLE_BOOKS_API_KEY is not configured.");
+  const q = buildBookSearchQuery(query, author, isbn);
+  if (!q) throw new Error("A book title, author, or ISBN is required.");
+  const params = new URLSearchParams({ q, maxResults: "10", printType: "books", key: apiKey });
+  const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`;
+  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const err = new Error(data?.error?.message || `Google Books API responded with HTTP ${response.status}.`);
+    err.response = { status: response.status, data };
+    throw err;
+  }
+  return (data.items || []).map(item => normalizeBookResult(item.volumeInfo || {}, "google-books"));
+}
+
+async function searchOpenLibrary({ query, author = "", isbn = "" }) {
+  const cleanIsbn = normalizeBookIsbn(isbn);
+  const params = new URLSearchParams({ limit: "10" });
+  if (cleanIsbn) params.set("isbn", cleanIsbn);
+  else {
+    if (cleanTextSafe(query)) params.set("title", cleanBookText(query));
+    if (cleanBookText(author)) params.set("author", cleanBookText(author));
+    if (!params.has("title") && !params.has("author")) params.set("q", cleanBookText(query));
+  }
+  const response = await fetch(`https://openlibrary.org/search.json?${params.toString()}`, { headers: { Accept: "application/json" } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`Open Library responded with HTTP ${response.status}.`);
+  return (data.docs || []).map(normalizeOpenLibraryResult).filter(book => book.title);
+}
+
+function cleanTextSafe(value) {
+  return cleanBookText(value).length > 0;
+}
+
+async function getGeminiBookFallback({ query, author = "", isbn = "" }) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!hasConfigValue(apiKey)) throw new Error("GEMINI_API_KEY is not configured.");
+  const model = CITATION_AI_MODEL;
+  const prompt = `You are a book bibliographic metadata expert.\n\nUser search: ${cleanBookText(query) || "(none)"}\nAuthor: ${cleanBookText(author) || "(none)"}\nISBN: ${normalizeBookIsbn(isbn) || "(none)"}\n\nOnly provide a result if you are VERY HIGHLY confident you know the exact book and its bibliographic facts. Do not guess an edition. If uncertain, return {"confident":false}. If very highly confident, return JSON with confident:true and title, authors, publisher, publishDate, isbn10, isbn13. publishDate may be YYYY or YYYY-MM-DD.\n\nReturn JSON only.`;
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, maxOutputTokens: 256 } }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || `Gemini responded with HTTP ${response.status}.`);
+  const raw = data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim() || "";
+  const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+  if (parsed?.confident !== true) return null;
+  const authors = Array.isArray(parsed.authors) ? parsed.authors.map(cleanBookText).filter(Boolean) : [];
+  if (!cleanBookText(parsed.title) || !authors.length) return null;
+  return {
+    source: "gemini",
+    confidence: "very_high",
+    title: cleanBookText(parsed.title),
+    subtitle: "",
+    authors,
+    author: authors.join(", "),
+    publisher: cleanBookText(parsed.publisher),
+    publishDate: cleanBookText(parsed.publishDate),
+    description: "",
+    isbn10: normalizeBookIsbn(parsed.isbn10),
+    isbn13: normalizeBookIsbn(parsed.isbn13),
+    pageCount: null,
+    categories: [],
+    cover: "",
+    previewLink: "",
+  };
+}
+
+app.get("/api/citation/books", async (req, res) => {
+  const query = cleanBookText(req.query.q || req.query.title || "");
+  const author = cleanBookText(req.query.author || "");
+  const isbn = normalizeBookIsbn(req.query.isbn || "");
+  if (!query && !author && !isbn) return res.status(400).json({ success: false, error: "Provide a book title, author, or ISBN." });
+
+  const diagnostics = [];
+  let googleResults = [];
+  try {
+    googleResults = await searchGoogleBooks({ query, author, isbn });
+    diagnostics.push({ source: "google-books", status: "ok", resultCount: googleResults.length });
+  } catch (err) {
+    diagnostics.push({ source: "google-books", status: "error", error: err?.message || "Google Books lookup failed." });
+  }
+  if (googleResults.length) return res.json({ success: true, data: { results: googleResults, selectedSource: "google-books", diagnostics } });
+
+  let openResults = [];
+  try {
+    openResults = await searchOpenLibrary({ query, author, isbn });
+    diagnostics.push({ source: "open-library", status: "ok", resultCount: openResults.length });
+  } catch (err) {
+    diagnostics.push({ source: "open-library", status: "error", error: err?.message || "Open Library lookup failed." });
+  }
+  if (openResults.length) return res.json({ success: true, data: { results: openResults, selectedSource: "open-library", diagnostics } });
+
+  try {
+    const gemini = await getGeminiBookFallback({ query, author, isbn });
+    diagnostics.push({ source: "gemini", status: gemini ? "very_high_confidence" : "no_confident_result" });
+    if (gemini) return res.json({ success: true, data: { results: [gemini], selectedSource: "gemini", diagnostics } });
+  } catch (err) {
+    diagnostics.push({ source: "gemini", status: "error", error: err?.message || "Gemini fallback failed." });
+  }
+
+  return res.json({ success: true, data: { results: [], selectedSource: null, diagnostics } });
+});
 
 // ── Citation AI helpers ─────────────────────────────────────────────────
 const CITATION_AI_MODEL = "gemini-3.1-flash-lite";
@@ -571,7 +755,9 @@ app.get("/api/google/status", async (req, res) => {
         ? (oauthConfigured ? "configured" : "missing_config")
         : service.key === "gemini"
           ? (env.geminiApiKey.configured ? "configured" : "missing_config")
-          : hasToken ? "pending" : "needs_token",
+          : service.key === "google-books"
+            ? (env.googleBooksApiKey.configured ? "configured" : "missing_config")
+            : hasToken ? "pending" : "needs_token",
     })),
     checks: [],
   };
@@ -617,7 +803,7 @@ app.get("/api/google/status", async (req, res) => {
 
   status.checks.push(...apiChecks);
   status.services = status.services.map(s => {
-    if (s.key === "oauth" || s.key === "gemini") return s;
+    if (s.key === "oauth" || s.key === "gemini" || s.key === "google-books") return s;
     const check = apiChecks.find(c => c.key === s.key);
     return { ...s, status: check?.status || s.status };
   });
