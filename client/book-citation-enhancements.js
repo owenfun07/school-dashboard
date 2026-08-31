@@ -14,7 +14,8 @@
       .book-search-or { flex: 0 0 auto; color: var(--text-muted); font-size: 12px; font-weight: 700; text-align: center; padding: 0 2px; }
       .book-isbn-row { display: flex; gap: 8px; flex: 1; min-width: 0; }
       .book-isbn-row input { flex: 1; min-width: 0; }
-      #scanIsbnBtn { width: 42px; height: 42px; padding: 0; flex: 0 0 42px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; line-height: 1; }
+      #scanIsbnBtn { width: 42px; height: 42px; padding: 0; flex: 0 0 42px; display: inline-flex; align-items: center; justify-content: center; }
+      #scanIsbnBtn svg { width: 20px; height: 20px; }
       .book-results { max-height: 285px; overflow-y: auto; padding-right: 4px; }
       .book-results.hidden-results { display: none; }
       .book-selected-note { margin-top: 10px; padding: 9px 12px; border-radius: 8px; background: var(--dash-bg); border: 1px solid var(--card-border); color: var(--text-secondary); font-size: 13px; }
@@ -50,7 +51,9 @@
         <div class="book-search-option">
           <div class="book-isbn-row">
             <input id="bookIsbnQuery" placeholder="ISBN-10 or ISBN-13">
-            <button id="scanIsbnBtn" type="button" class="tab-btn" title="Scan ISBN barcode" aria-label="Scan ISBN barcode">▥</button>
+            <button id="scanIsbnBtn" type="button" class="tab-btn" title="Scan ISBN barcode" aria-label="Scan ISBN barcode">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 9v6M9 9v6M11 9v6M14 9v6M16 9v6M18 9v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
           </div>
         </div>
         <div class="book-search-action"><button id="bookSearchBtn" class="primary-btn" type="button">Search Books</button></div>
@@ -74,12 +77,13 @@
         if (typeof showNotice === "function") showNotice("Enter a book title or author, or enter an ISBN. You only need one.", "warning", false);
         return;
       }
-      if (q && isbn) {
-        // Prefer an ISBN when both are supplied because it identifies an edition.
-        if (typeof devLog === "function") devLog("Book search: both fields supplied; using ISBN because it identifies a specific edition.", "info");
+      if (q && isbn && typeof devLog === "function") {
+        devLog("Book search: both fields supplied; using ISBN because it identifies a specific edition.", "info");
       }
 
       const loading = document.getElementById("bookLoading");
+      const selectedNote = document.getElementById("book-selected-note");
+      selectedNote?.remove();
       loading?.classList.remove("hidden");
       bookResults.classList.remove("hidden-results");
       bookResults.innerHTML = "";
@@ -115,7 +119,6 @@
           button.onclick = function () {
             const book = data.results[Number(button.dataset.bookIndex)];
             if (typeof fillBookResult === "function") fillBookResult(book);
-            // Hide the results after selecting an edition so the form is uncluttered.
             bookResults.classList.add("hidden-results");
             let note = document.getElementById("book-selected-note");
             if (!note) {
@@ -196,7 +199,7 @@
         scannerReader = new ZX.BrowserMultiFormatReader();
         status.textContent = "Point the camera at the ISBN barcode on the back of the book.";
         const video = document.getElementById("isbnScannerVideo");
-        await scannerReader.decodeFromVideoDevice(undefined, video, (result, error) => {
+        await scannerReader.decodeFromVideoDevice(undefined, video, (result) => {
           if (!scannerActive || !result) return;
           const raw = result.getText().replace(/\s/g, "");
           if (!/^(97[89])\d{10}$/.test(raw) && !/^\d{9}[\dXx]$/.test(raw)) return;
