@@ -180,7 +180,7 @@
       if (window.ZXingBrowser) return window.ZXingBrowser;
       await new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js";
+        script.src = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js";
         script.onload = resolve;
         script.onerror = () => reject(new Error("The barcode scanner library could not be loaded."));
         document.head.appendChild(script);
