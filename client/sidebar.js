@@ -221,3 +221,13 @@ const NAV = [
     if (e.key === "Escape") closeMenu();
   });
 })();
+
+// Book citation UI enhancements are isolated from the existing citation page
+// and loaded only on Source Citation, so the existing website citation system
+// remains untouched.
+if (window.location.pathname === "/source-citation" || window.location.pathname === "/source-citation.html") {
+  const script = document.createElement("script");
+  script.src = "/book-citation-enhancements.js";
+  script.defer = true;
+  document.head.appendChild(script);
+}
