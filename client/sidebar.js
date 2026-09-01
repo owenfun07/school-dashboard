@@ -226,8 +226,13 @@ const NAV = [
 // and loaded only on Source Citation, so the existing website citation system
 // remains untouched.
 if (window.location.pathname === "/source-citation" || window.location.pathname === "/source-citation.html") {
-  const script = document.createElement("script");
-  script.src = "/book-citation-enhancements.js";
-  script.defer = true;
-  document.head.appendChild(script);
+  const bookScript = document.createElement("script");
+  bookScript.src = "/book-citation-enhancements.js";
+  bookScript.defer = true;
+  document.head.appendChild(bookScript);
+
+  const scannerScript = document.createElement("script");
+  scannerScript.src = "/isbn-scanner-enhancements.js";
+  scannerScript.defer = true;
+  document.head.appendChild(scannerScript);
 }
