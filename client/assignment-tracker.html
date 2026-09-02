@@ -6,68 +6,52 @@
   <script src="theme-loader.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
-    .tracker-page { padding: 32px 40px; min-height: 100vh; background: var(--page-bg); }
+    .tracker-page { padding:32px 40px; min-height:100vh; background:var(--page-bg); }
     .tracker-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
     .tracker-header h1 { margin:0; color:var(--text-primary); font-size:24px; }
     .tracker-actions { display:flex; gap:8px; flex-wrap:wrap; }
-
-    .import-btn {
-      border:1px solid #6366f1; background:#ede9fe; color:#4f46e5;
-      border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer;
-    }
+    .import-btn,.add-card-btn { border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+    .import-btn { border:1px solid #6366f1; background:#ede9fe; color:#4f46e5; }
     .import-btn:hover { background:#ddd6fe; }
-    .add-card-btn {
-      border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary);
-      border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer;
-    }
+    .add-card-btn { border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary); }
     .add-card-btn:hover { background:var(--dash-bg); }
-
     .kanban { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start; }
-
     .kanban-col { background:var(--dash-bg); border:1px solid var(--card-border); border-radius:14px; padding:14px; min-height:200px; }
     .kanban-col-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
     .kanban-col-title { font-size:14px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
     .kanban-col-count { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; background:var(--card-bg); color:var(--text-muted); border:1px solid var(--card-border); }
-
-    .kanban-card {
-      background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px;
-      padding:12px; margin-bottom:10px; cursor:grab;
-      box-shadow:0 2px 6px rgba(0,0,0,0.04);
-      transition:box-shadow 0.15s, transform 0.1s;
-      position:relative;
-    }
-    .kanban-card:hover { box-shadow:0 4px 14px rgba(0,0,0,0.1); }
-    .kanban-card.dragging { opacity:0.4; cursor:grabbing; }
-    .kanban-card.drag-over { outline:2px dashed #6366f1; outline-offset:2px; }
-
-    .kanban-card-title { font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
-    .kanban-card-meta  { font-size:12px; color:var(--text-muted); }
-    .kanban-card-course { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; background:#ede9fe; color:#4f46e5; display:inline-block; margin-top:6px; }
-    .kanban-card-due   { font-size:11px; color:var(--text-muted); margin-top:4px; }
-    .kanban-card-del   { position:absolute; top:8px; right:8px; border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px; opacity:0; transition:opacity 0.15s; }
-    .kanban-card:hover .kanban-card-del { opacity:1; }
-    .kanban-card-del:hover { color:#dc2626; }
-
-    .kanban-drop-zone { min-height:40px; border-radius:8px; border:2px dashed transparent; transition:border-color 0.15s, background 0.15s; }
-    .kanban-drop-zone.drag-over-col { border-color:#6366f1; background:#f5f3ff; }
-
-    /* Add form */
+    .kanban-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; padding:12px; margin-bottom:10px; cursor:grab; box-shadow:0 2px 6px rgba(0,0,0,.04); transition:box-shadow .15s,transform .1s; position:relative; border-left:4px solid var(--course-color,var(--card-border)); }
+    .kanban-card:hover { box-shadow:0 4px 14px rgba(0,0,0,.1); }
+    .kanban-card.dragging { opacity:.4; cursor:grabbing; }
+    .kanban-card-title { font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:3px; padding-right:45px; }
+    .kanban-card-description { font-size:11px; line-height:1.45; color:var(--text-muted); margin:0 35px 6px 0; white-space:pre-wrap; }
+    .kanban-card-course { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; background:color-mix(in srgb,var(--course-color,#6366f1) 14%,transparent); color:var(--course-color,#4f46e5); display:inline-block; margin-top:5px; }
+    .kanban-card-due { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .kanban-card-priority { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; margin:6px 4px 0 0; }
+    .kanban-card-actions { position:absolute; top:7px; right:7px; display:flex; gap:2px; opacity:0; transition:opacity .15s; }
+    .kanban-card:hover .kanban-card-actions { opacity:1; }
+    .card-action { border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px; padding:2px 4px; border-radius:5px; }
+    .card-action:hover { background:var(--dash-bg); color:var(--text-primary); }
+    .card-action.delete:hover { color:#dc2626; }
+    .kanban-drop-zone { min-height:40px; border-radius:8px; border:2px dashed transparent; transition:border-color .15s,background .15s; }
+    .kanban-col.drag-over-col .kanban-drop-zone { border-color:#6366f1; background:#f5f3ff; }
     .add-form { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; padding:12px; margin-bottom:10px; display:none; flex-direction:column; gap:8px; }
     .add-form.open { display:flex; }
-    .add-form input, .add-form select {
-      border:1px solid var(--card-border); border-radius:8px; padding:8px 10px;
-      font-size:13px; background:var(--dash-bg); color:var(--text-primary);
-    }
-    .add-form input:focus, .add-form select:focus { outline:none; border-color:#6366f1; }
+    .add-form input,.add-form textarea,.add-form select { border:1px solid var(--card-border); border-radius:8px; padding:8px 10px; font-size:13px; background:var(--dash-bg); color:var(--text-primary); font-family:inherit; box-sizing:border-box; width:100%; }
+    .add-form textarea { resize:vertical; min-height:70px; }
+    .add-form input:focus,.add-form textarea:focus,.add-form select:focus { outline:none; border-color:#6366f1; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .form-label { font-size:11px; color:var(--text-muted); font-weight:600; margin:2px 0 -4px; }
+    .color-row { display:flex; align-items:center; gap:8px; }
+    .color-row input[type=color] { width:42px; height:34px; padding:3px; cursor:pointer; }
+    .priority-preview { font-size:11px; color:var(--text-muted); }
     .add-form-btns { display:flex; gap:8px; }
     .add-form-save { flex:1; border:none; background:#6366f1; color:white; border-radius:8px; padding:8px; font-size:13px; font-weight:600; cursor:pointer; }
     .add-form-cancel { border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; }
-
     .status-banner { padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px; display:none; }
     .status-banner.info { background:#ede9fe; color:#4f46e5; border:1px solid #ddd6fe; display:block; }
     .status-banner.warn { background:#fef3c7; color:#92400e; border:1px solid #fde68a; display:block; }
-
-    @media (max-width: 700px) { .kanban { grid-template-columns:1fr; } }
+    @media(max-width:700px){ .kanban{grid-template-columns:1fr;} .form-row{grid-template-columns:1fr;} .tracker-page{padding:24px 16px;} }
   </style>
 </head>
 <body>
@@ -79,217 +63,50 @@
       <button class="add-card-btn" id="add-btn">+ Add manually</button>
     </div>
   </div>
-
   <div class="status-banner" id="status-banner"></div>
-
   <div class="kanban" id="kanban">
-    <div class="kanban-col" id="col-todo"        data-col="todo">
-      <div class="kanban-col-header">
-        <div class="kanban-col-title">📌 To Do <span class="kanban-col-count" id="count-todo">0</span></div>
-      </div>
+    <div class="kanban-col" id="col-todo" data-col="todo">
+      <div class="kanban-col-header"><div class="kanban-col-title">📌 To Do <span class="kanban-col-count" id="count-todo">0</span></div></div>
       <div class="add-form" id="add-form-todo">
-        <input id="af-title"  placeholder="Assignment title" type="text">
-        <input id="af-course" placeholder="Course (optional)" type="text">
-        <input id="af-due"    placeholder="Due date (optional)" type="date">
-        <div class="add-form-btns">
-          <button class="add-form-save"   onclick="saveManual()">Add</button>
-          <button class="add-form-cancel" onclick="closeAddForm()">Cancel</button>
+        <input id="af-title" placeholder="Assignment title" type="text">
+        <textarea id="af-description" placeholder="Extended description (optional)"></textarea>
+        <div class="form-row"><input id="af-course" placeholder="Course (optional)" type="text"><input id="af-due" type="date" title="Due date (optional)"></div>
+        <div class="form-row">
+          <div><div class="form-label">Course color</div><div class="color-row"><input id="af-course-color" type="color" value="#6366f1"><span class="priority-preview">Used for this course's assignment card.</span></div></div>
+          <div><div class="form-label">Priority</div><select id="af-priority"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option><option value="critical">Critical</option></select></div>
         </div>
+        <div class="add-form-btns"><button class="add-form-save" id="form-save-btn" onclick="saveManual()">Add</button><button class="add-form-cancel" onclick="closeAddForm()">Cancel</button></div>
       </div>
       <div class="kanban-drop-zone" id="dz-todo"></div>
     </div>
-
-    <div class="kanban-col" id="col-inprogress" data-col="inprogress">
-      <div class="kanban-col-header">
-        <div class="kanban-col-title">⚡ In Progress <span class="kanban-col-count" id="count-inprogress">0</span></div>
-      </div>
-      <div class="kanban-drop-zone" id="dz-inprogress"></div>
-    </div>
-
-    <div class="kanban-col" id="col-done"        data-col="done">
-      <div class="kanban-col-header">
-        <div class="kanban-col-title">✅ Done <span class="kanban-col-count" id="count-done">0</span></div>
-      </div>
-      <div class="kanban-drop-zone" id="dz-done"></div>
-    </div>
+    <div class="kanban-col" id="col-inprogress" data-col="inprogress"><div class="kanban-col-header"><div class="kanban-col-title">⚡ In Progress <span class="kanban-col-count" id="count-inprogress">0</span></div></div><div class="kanban-drop-zone" id="dz-inprogress"></div></div>
+    <div class="kanban-col" id="col-done" data-col="done"><div class="kanban-col-header"><div class="kanban-col-title">✅ Done <span class="kanban-col-count" id="count-done">0</span></div></div><div class="kanban-drop-zone" id="dz-done"></div></div>
   </div>
 </div>
-
 <script src="sidebar.js"></script>
 <script>
-const token   = localStorage.getItem("access_token");
-const isDemo  = localStorage.getItem("demo_mode") === "1";
-const STORE_KEY = "assignment_tracker_cards";
-
-let cards = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
-let dragId = null;
-
-function saveCards() { localStorage.setItem(STORE_KEY, JSON.stringify(cards)); }
-
-function fmt(dateObj) {
-  if (!dateObj) return "";
-  if (typeof dateObj === "string") return dateObj;
-  const { year, month, day } = dateObj;
-  if (!year) return "";
-  return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-}
-
-function fmtDisplay(dateStr) {
-  if (!dateStr) return "";
-  try {
-    return new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
-  } catch { return dateStr; }
-}
-
-function isPast(dateStr) {
-  if (!dateStr) return false;
-  return new Date(dateStr + "T23:59:59") < new Date();
-}
-
-// ── Render ──────────────────────────────────────────────────────────
-function render() {
-  ["todo","inprogress","done"].forEach(col => {
-    const dz   = document.getElementById("dz-" + col);
-    const colCards = cards.filter(c => c.col === col);
-    // Clear only card elements, not the drop zone itself
-    dz.parentElement.querySelectorAll(".kanban-card").forEach(el => el.remove());
-
-    colCards.forEach(card => {
-      const el = document.createElement("div");
-      el.className = "kanban-card";
-      el.dataset.id = card.id;
-      el.draggable = true;
-      el.innerHTML = `
-        <button class="kanban-card-del" onclick="deleteCard('${card.id}')" title="Delete">×</button>
-        <div class="kanban-card-title">${escHtml(card.title)}</div>
-        ${card.course ? `<div class="kanban-card-course">${escHtml(card.course)}</div>` : ""}
-        ${card.due    ? `<div class="kanban-card-due ${isPast(card.due) && col!=="done" ? "style='color:#dc2626;font-weight:600'" : ""}">Due: ${fmtDisplay(card.due)}</div>` : ""}
-      `;
-      el.addEventListener("dragstart", e => { dragId = card.id; el.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; });
-      el.addEventListener("dragend",   () => el.classList.remove("dragging"));
-      // Insert before the drop zone
-      dz.insertAdjacentElement("beforebegin", el);
-    });
-
-    document.getElementById("count-" + col).textContent = colCards.length;
-  });
-}
-
-// ── Drag and drop ───────────────────────────────────────────────────
-["todo","inprogress","done"].forEach(col => {
-  const colEl = document.getElementById("col-" + col);
-  colEl.addEventListener("dragover", e => { e.preventDefault(); colEl.classList.add("drag-over-col"); });
-  colEl.addEventListener("dragleave",() => colEl.classList.remove("drag-over-col"));
-  colEl.addEventListener("drop", e => {
-    e.preventDefault();
-    colEl.classList.remove("drag-over-col");
-    if (!dragId) return;
-    const card = cards.find(c => c.id === dragId);
-    if (card) { card.col = col; saveCards(); render(); }
-    dragId = null;
-  });
-});
-
-// ── Add manual card ─────────────────────────────────────────────────
-document.getElementById("add-btn").addEventListener("click", () => {
-  const form = document.getElementById("add-form-todo");
-  form.classList.toggle("open");
-  if (form.classList.contains("open")) document.getElementById("af-title").focus();
-});
-
-function closeAddForm() { document.getElementById("add-form-todo").classList.remove("open"); }
-
-function saveManual() {
-  const title = document.getElementById("af-title").value.trim();
-  if (!title) { document.getElementById("af-title").focus(); return; }
-  cards.push({
-    id:     Date.now() + Math.random(),
-    title,
-    course: document.getElementById("af-course").value.trim(),
-    due:    document.getElementById("af-due").value || "",
-    col:    "todo",
-    source: "manual",
-  });
-  saveCards(); render(); closeAddForm();
-  document.getElementById("af-title").value = "";
-  document.getElementById("af-course").value = "";
-  document.getElementById("af-due").value = "";
-}
-
-function deleteCard(id) {
-  cards = cards.filter(c => String(c.id) !== String(id));
-  saveCards(); render();
-}
-
-// ── Import from Classroom ───────────────────────────────────────────
-document.getElementById("import-btn").addEventListener("click", importFromClassroom);
-
-async function importFromClassroom() {
-  const banner = document.getElementById("status-banner");
-  if (!token) {
-    banner.className = "status-banner warn";
-    banner.textContent = "⚠️ You need to be logged in to import from Classroom. Log in from the sidebar.";
-    return;
-  }
-
-  banner.className = "status-banner info";
-  banner.textContent = "⏳ Fetching your Classroom assignments…";
-
-  try {
-    const coursesResp = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
-    const coursesData = await coursesResp.json();
-    const courses = coursesData.courses || [];
-
-    if (!courses.length) {
-      banner.textContent = "ℹ️ No Classroom courses found.";
-      return;
-    }
-
-    let imported = 0, skipped = 0;
-    const existingTitles = new Set(cards.map(c => c.title.toLowerCase()));
-
-    for (const course of courses) {
-      const cwResp = await fetch(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(course.id)}`);
-      const cwData = await cwResp.json();
-      const works  = cwData.courseWork || [];
-
-      works.forEach(work => {
-        if (existingTitles.has(work.title.toLowerCase())) { skipped++; return; }
-
-        // Map Classroom submission state to kanban column
-        let col = "todo";
-        if (work.mySubmissionState === "TURNED_IN" || work.mySubmissionState === "RETURNED") col = "done";
-        else if (work.mySubmissionState === "CREATED" || work.mySubmissionState === "RECLAIMED_BY_STUDENT") col = "inprogress";
-
-        cards.push({
-          id:     "cl-" + work.id,
-          title:  work.title,
-          course: course.name,
-          due:    fmt(work.dueDate),
-          col,
-          source: "classroom",
-        });
-        existingTitles.add(work.title.toLowerCase());
-        imported++;
-      });
-    }
-
-    saveCards(); render();
-    banner.className = "status-banner info";
-    banner.textContent = `✓ Imported ${imported} assignment${imported!==1?"s":""}${skipped ? ` (${skipped} already existed, skipped)` : ""}.`;
-  } catch (err) {
-    banner.className = "status-banner warn";
-    banner.textContent = "⚠️ Could not import: " + err.message + " — please re-login and try again.";
-  }
-}
-
-function escHtml(s) {
-  return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
-
-// Enter key in add form
-document.getElementById("af-title").addEventListener("keydown", e => { if (e.key==="Enter") saveManual(); });
-
+const token=localStorage.getItem("access_token");
+const STORE_KEY="assignment_tracker_cards";
+const DEFAULT_COLOR="#6366f1";
+const PRIORITIES={low:{label:"Low",bg:"#dcfce7",fg:"#166534"},normal:{label:"Normal",bg:"#e5e7eb",fg:"#374151"},medium:{label:"Medium",bg:"#fef3c7",fg:"#92400e"},high:{label:"High",bg:"#fed7aa",fg:"#9a3412"},urgent:{label:"Urgent",bg:"#fecaca",fg:"#b91c1c"},critical:{label:"Critical",bg:"#fca5a5",fg:"#7f1d1d"}};
+let cards=JSON.parse(localStorage.getItem(STORE_KEY)||"[]"),dragId=null,editingId=null;
+function saveCards(){localStorage.setItem(STORE_KEY,JSON.stringify(cards));}
+function fmt(d){if(!d)return "";if(typeof d==="string")return d;const{year,month,day}=d;if(!year)return "";return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;}
+function fmtDisplay(d){if(!d)return "";try{return new Date(d+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});}catch{return d;}}
+function isPast(d){return d&&new Date(d+"T23:59:59")<new Date();}
+function priorityInfo(p){return PRIORITIES[p]||PRIORITIES.normal;}
+function render(){["todo","inprogress","done"].forEach(col=>{const dz=document.getElementById("dz-"+col),colCards=cards.filter(c=>c.col===col);dz.parentElement.querySelectorAll(".kanban-card").forEach(el=>el.remove());colCards.forEach(card=>{const el=document.createElement("div"),p=priorityInfo(card.priority);el.className="kanban-card";el.dataset.id=card.id;el.draggable=true;el.style.setProperty("--course-color",card.courseColor||DEFAULT_COLOR);el.innerHTML=`<div class="kanban-card-actions"><button class="card-action" onclick="editCard('${card.id}')" title="Edit">✎</button><button class="card-action delete" onclick="deleteCard('${card.id}')" title="Delete">×</button></div><div class="kanban-card-title">${escHtml(card.title)}</div>${card.description?`<div class="kanban-card-description">${escHtml(card.description)}</div>`:""}${card.course?`<div class="kanban-card-course">${escHtml(card.course)}</div>`:""}<span class="kanban-card-priority" style="background:${p.bg};color:${p.fg}">${p.label}</span>${card.due?`<div class="kanban-card-due" ${isPast(card.due)&&col!=="done"?`style="color:#dc2626;font-weight:600"`:""}>Due: ${fmtDisplay(card.due)}</div>`:""}`;el.addEventListener("dragstart",e=>{dragId=card.id;el.classList.add("dragging");e.dataTransfer.effectAllowed="move";});el.addEventListener("dragend",()=>el.classList.remove("dragging"));dz.insertAdjacentElement("beforebegin",el);});document.getElementById("count-"+col).textContent=colCards.length;});}
+["todo","inprogress","done"].forEach(col=>{const colEl=document.getElementById("col-"+col);colEl.addEventListener("dragover",e=>{e.preventDefault();colEl.classList.add("drag-over-col")});colEl.addEventListener("dragleave",()=>colEl.classList.remove("drag-over-col"));colEl.addEventListener("drop",e=>{e.preventDefault();colEl.classList.remove("drag-over-col");if(!dragId)return;const card=cards.find(c=>String(c.id)===String(dragId));if(card){card.col=col;saveCards();render();}dragId=null;});});
+function openForm(card=null){const form=document.getElementById("add-form-todo");form.classList.add("open");editingId=card?card.id:null;document.getElementById("form-save-btn").textContent=card?"Save changes":"Add";document.getElementById("af-title").value=card?.title||"";document.getElementById("af-description").value=card?.description||"";document.getElementById("af-course").value=card?.course||"";document.getElementById("af-due").value=card?.due||"";document.getElementById("af-course-color").value=card?.courseColor||DEFAULT_COLOR;document.getElementById("af-priority").value=card?.priority||"normal";document.getElementById("af-title").focus();}
+document.getElementById("add-btn").addEventListener("click",()=>{const form=document.getElementById("add-form-todo");if(form.classList.contains("open")&&!editingId){closeAddForm();}else openForm();});
+function closeAddForm(){document.getElementById("add-form-todo").classList.remove("open");editingId=null;document.getElementById("form-save-btn").textContent="Add";}
+function saveManual(){const title=document.getElementById("af-title").value.trim();if(!title){document.getElementById("af-title").focus();return;}const data={title,description:document.getElementById("af-description").value.trim(),course:document.getElementById("af-course").value.trim(),due:document.getElementById("af-due").value||"",courseColor:document.getElementById("af-course-color").value||DEFAULT_COLOR,priority:document.getElementById("af-priority").value||"normal"};if(editingId){const card=cards.find(c=>String(c.id)===String(editingId));if(card)Object.assign(card,data);}else{cards.push({id:Date.now()+Math.random(),...data,col:"todo",source:"manual"});}saveCards();render();closeAddForm();}
+function editCard(id){const card=cards.find(c=>String(c.id)===String(id));if(card)openForm(card);}
+function deleteCard(id){cards=cards.filter(c=>String(c.id)!==String(id));saveCards();render();}
+document.getElementById("import-btn").addEventListener("click",importFromClassroom);
+async function importFromClassroom(){const banner=document.getElementById("status-banner");if(!token){banner.className="status-banner warn";banner.textContent="⚠️ You need to be logged in to import from Classroom. Log in from the sidebar.";return;}banner.className="status-banner info";banner.textContent="⏳ Fetching your Classroom assignments…";try{const coursesResp=await fetch(`/api/classroom?token=${encodeURIComponent(token)}`),coursesData=await coursesResp.json(),courses=coursesData.courses||[];if(!courses.length){banner.textContent="ℹ️ No Classroom courses found.";return;}let imported=0,skipped=0;const existingTitles=new Set(cards.map(c=>c.title.toLowerCase()));for(const course of courses){const cwResp=await fetch(`/api/coursework?token=${encodeURIComponent(token)}&courseId=${encodeURIComponent(course.id)}`),cwData=await cwResp.json(),works=cwData.courseWork||[];works.forEach(work=>{if(existingTitles.has(work.title.toLowerCase())){skipped++;return;}let col="todo";if(work.mySubmissionState==="TURNED_IN"||work.mySubmissionState==="RETURNED")col="done";else if(work.mySubmissionState==="CREATED"||work.mySubmissionState==="RECLAIMED_BY_STUDENT")col="inprogress";cards.push({id:"cl-"+work.id,title:work.title,description:work.description||"",course:course.name,due:fmt(work.dueDate),courseColor:DEFAULT_COLOR,priority:"normal",col,source:"classroom"});existingTitles.add(work.title.toLowerCase());imported++;});}saveCards();render();banner.className="status-banner info";banner.textContent=`✓ Imported ${imported} assignment${imported!==1?"s":""}${skipped?` (${skipped} already existed, skipped)`:""}.`;}catch(err){banner.className="status-banner warn";banner.textContent="⚠️ Could not import: "+err.message+" — please re-login and try again.";}}
+function escHtml(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+document.getElementById("af-title").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey)saveManual();});
 render();
 </script>
 </body>
