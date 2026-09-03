@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How School Dashboard Uses Google</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <style>
+    :root { --bg:#f5f7fb; --card:#fff; --text:#101828; --secondary:#475467; --muted:#667085; --border:#e8edf5; --accent:#6366f1; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,sans-serif; background:var(--bg); color:var(--text); line-height:1.65; }
+    .topbar { max-width:1000px; margin:auto; padding:22px 24px; display:flex; justify-content:space-between; align-items:center; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:20px; }
+    .brand img { width:34px; height:34px; object-fit:contain; }
+    .back { color:var(--secondary); text-decoration:none; font-weight:600; }
+    .back:hover { text-decoration:underline; }
+    main { max-width:900px; margin:25px auto 70px; padding:0 24px; }
+    .hero { text-align:center; margin-bottom:38px; }
+    .hero h1 { font-size:clamp(32px,6vw,46px); line-height:1.15; margin:0 0 14px; }
+    .hero p { max-width:700px; margin:auto; color:var(--secondary); font-size:18px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px; margin:18px 0; box-shadow:0 5px 18px rgba(0,0,0,.04); }
+    h2 { margin-top:0; font-size:25px; }
+    h3 { margin-bottom:6px; font-size:19px; }
+    p { color:var(--secondary); }
+    ul { color:var(--secondary); padding-left:24px; }
+    .note { border-left:4px solid var(--accent); padding:14px 18px; background:var(--bg); border-radius:8px; margin-top:18px; }
+    .footer { text-align:center; color:var(--muted); font-size:13px; padding:10px 24px 35px; }
+    .footer a { color:var(--muted); margin:0 7px; }
+    @media(max-width:650px) { .topbar { padding:16px 18px; } main { padding:0 18px; margin-top:15px; } .card { padding:22px; } .back { font-size:14px; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="/logo.png" alt="School Dashboard logo"><span>School Dashboard</span></div>
+    <a class="back" href="/homepage-test">← Back to homepage</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>How School Dashboard Uses Google</h1>
+      <p>We want you to know exactly what happens when you connect your Google account, so here is the longer version in plain English.</p>
+    </section>
+
+    <section class="card">
+      <h2>Why does School Dashboard use Google?</h2>
+      <p>Some of School Dashboard's most useful features work with information from your Google account. Signing in with Google lets the dashboard connect to the Google services needed for those features.</p>
+      <p>Google handles the sign-in and permission screen. Before access is granted, Google shows you the permissions requested by the app.</p>
+    </section>
+
+    <section class="card">
+      <h2>What Google information can be used?</h2>
+      <p>The exact information available depends on the Google permissions enabled for the app and the features you use. The current application is designed to work with these Google services:</p>
+      <h3>Google Classroom</h3>
+      <p>Classroom information can be used to show courses, coursework, student submissions, and related schoolwork in the dashboard.</p>
+      <h3>Google Calendar</h3>
+      <p>Calendar access can be used to display upcoming events and help bring your schedule into one place.</p>
+      <h3>Google Drive</h3>
+      <p>Drive access can be used by dashboard features that search for recent or starred files and manage starred state.</p>
+      <div class="note"><strong>Important:</strong> Google only provides information covered by the permissions you approve. If a feature is not connected to Google, it does not need access to your Google account.</div>
+    </section>
+
+    <section class="card">
+      <h2>What about AI?</h2>
+      <p>School Dashboard has an optional AI-powered feature for the Source Citation tool. It can help improve or fill in citation information when the normal webpage or book lookup does not provide enough metadata.</p>
+      <p>The AI feature is <strong>optional</strong>. You can use the citation tool without choosing to use AI when that option is available. AI is not required just to sign in to School Dashboard or use the regular dashboard.</p>
+      <p>When AI citation enhancement is used, the request is handled by the server and sent to the configured Gemini API service. The feature is intended to work with citation-related information, such as a source URL and metadata, rather than acting as a general-purpose reader of your Google account.</p>
+    </section>
+
+    <section class="card">
+      <h2>Other services used for citations</h2>
+      <h3>Google Books</h3>
+      <p>Book citation features can use Google Books to look up bibliographic information such as book titles, authors, and editions.</p>
+      <h3>Open Library</h3>
+      <p>If the primary book lookup does not find enough information, the citation tool can use Open Library as a fallback.</p>
+      <p>These citation services are separate from your Google account sign-in permissions.</p>
+    </section>
+
+    <section class="card">
+      <h2>Do we sell your information?</h2>
+      <p>No. School Dashboard is not designed to sell your personal information or Google account information. Google account access is used to provide the features you choose to use.</p>
+      <p>For the complete details about information handling, please see our <a href="/privacy">Privacy Policy</a>.</p>
+    </section>
+
+    <section class="card">
+      <h2>Can I use School Dashboard without Google?</h2>
+      <p>Yes, where a feature does not require Google account data. School Dashboard includes tools that can be used without signing in. Google-powered features, such as loading your Classroom or Calendar information, naturally require the appropriate Google connection.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a href="/privacy">Privacy Policy</a> • <a href="/terms">Terms of Service</a>
+  </footer>
+</body>
+</html>
