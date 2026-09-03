@@ -7,199 +7,43 @@
   <link rel="icon" type="image/x-icon" href="/logo.png">
   <script src="theme-loader.js"></script>
   <style>
-    :root {
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --text: #101828;
-      --secondary: #475467;
-      --muted: #667085;
-      --border: #e8edf5;
-      --accent: #6366f1;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 22px 24px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .brand img { width: 34px; height: 34px; object-fit: contain; }
-
-    .help-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--card);
-      color: var(--secondary);
-      text-decoration: none;
-      font-weight: 700;
-      box-shadow: 0 3px 10px rgba(0,0,0,.08);
-    }
-
-    .hero {
-      max-width: 900px;
-      margin: 45px auto 0;
-      padding: 0 24px 70px;
-      text-align: center;
-    }
-
-    .test-label {
-      display: inline-block;
-      margin-bottom: 18px;
-      padding: 5px 11px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--card);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0 auto 18px;
-      max-width: 760px;
-      font-size: clamp(34px, 6vw, 52px);
-      line-height: 1.12;
-    }
-
-    .hero p {
-      max-width: 680px;
-      margin: 0 auto 28px;
-      color: var(--secondary);
-      font-size: 18px;
-    }
-
-    .google-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      min-width: 230px;
-      padding: 14px 24px;
-      border: 1px solid #d0d5dd;
-      border-radius: 999px;
-      background: #fff;
-      color: var(--text);
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 600;
-      box-shadow: 0 3px 10px rgba(0,0,0,.06);
-      cursor: pointer;
-    }
-
-    .google-btn:hover { box-shadow: 0 5px 15px rgba(0,0,0,.10); }
-    .google-btn img { width: 20px; height: 20px; }
-
-    .section {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 70px 24px;
-    }
-
-    .section h2 {
-      margin: 0 0 12px;
-      text-align: center;
-      font-size: 30px;
-    }
-
-    .section-intro {
-      max-width: 700px;
-      margin: 0 auto 32px;
-      text-align: center;
-      color: var(--secondary);
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-    }
-
-    .card {
-      padding: 24px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: var(--card);
-      box-shadow: 0 5px 18px rgba(0,0,0,.04);
-    }
-
-    .card h3 { margin: 0 0 8px; font-size: 19px; }
-    .card p { margin: 0; color: var(--secondary); }
-
-    .google-info {
-      max-width: 850px;
-      margin: 0 auto;
-      padding: 30px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: var(--card);
-    }
-
-    .google-info p { color: var(--secondary); }
-    .google-info p:last-child { margin-bottom: 0; }
-
-    .privacy {
-      text-align: center;
-      border-top: 1px solid var(--border);
-    }
-
-    .links a {
-      color: var(--text);
-      font-weight: 600;
-      margin: 0 10px;
-      text-decoration: none;
-    }
-
-    .links a:hover { text-decoration: underline; }
-
-    .footer {
-      padding: 28px 24px 40px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    @media (max-width: 750px) {
-      .topbar { padding: 16px 18px; }
-      .hero { margin-top: 25px; padding-bottom: 45px; }
-      .section { padding: 45px 18px; }
-      .cards { grid-template-columns: 1fr; }
-      .google-info { padding: 22px; }
-    }
+    :root { --bg:#f5f7fb; --card:#fff; --text:#101828; --secondary:#475467; --muted:#667085; --border:#e8edf5; --accent:#6366f1; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:Arial,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; max-width:1100px; margin:auto; padding:22px 24px; }
+    .brand { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:700; }
+    .brand img { width:34px; height:34px; object-fit:contain; }
+    .help-btn { display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:var(--card); color:var(--secondary); text-decoration:none; font-weight:700; box-shadow:0 3px 10px rgba(0,0,0,.08); }
+    .hero { max-width:900px; margin:45px auto 0; padding:0 24px 70px; text-align:center; }
+    .test-label { display:inline-block; margin-bottom:18px; padding:5px 11px; border:1px solid var(--border); border-radius:999px; background:var(--card); color:var(--muted); font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+    h1 { margin:0 auto 18px; max-width:760px; font-size:clamp(34px,6vw,52px); line-height:1.12; }
+    .hero p { max-width:680px; margin:0 auto 28px; color:var(--secondary); font-size:18px; }
+    .google-btn { display:inline-flex; align-items:center; justify-content:center; gap:12px; min-width:230px; padding:14px 24px; border:1px solid #d0d5dd; border-radius:999px; background:#fff; color:var(--text); text-decoration:none; font-size:16px; font-weight:600; box-shadow:0 3px 10px rgba(0,0,0,.06); cursor:pointer; }
+    .google-btn:hover { box-shadow:0 5px 15px rgba(0,0,0,.10); }
+    .google-btn img { width:20px; height:20px; }
+    .section { max-width:1100px; margin:0 auto; padding:70px 24px; }
+    .section h2 { margin:0 0 12px; text-align:center; font-size:30px; }
+    .section-intro { max-width:700px; margin:0 auto 32px; text-align:center; color:var(--secondary); }
+    .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .card { padding:24px; border:1px solid var(--border); border-radius:18px; background:var(--card); box-shadow:0 5px 18px rgba(0,0,0,.04); }
+    .card h3 { margin:0 0 8px; font-size:19px; }
+    .card p { margin:0; color:var(--secondary); }
+    .google-info { max-width:850px; margin:0 auto; padding:30px; border:1px solid var(--border); border-radius:20px; background:var(--card); text-align:center; }
+    .google-info p { color:var(--secondary); }
+    .google-info p:last-of-type { margin-bottom:20px; }
+    .more-btn { display:inline-flex; align-items:center; justify-content:center; padding:11px 20px; border-radius:999px; background:var(--text); color:#fff; text-decoration:none; font-weight:600; }
+    .more-btn:hover { opacity:.9; }
+    .privacy { text-align:center; border-top:1px solid var(--border); }
+    .links a { color:var(--text); font-weight:600; margin:0 10px; text-decoration:none; }
+    .links a:hover { text-decoration:underline; }
+    .footer { padding:28px 24px 40px; text-align:center; color:var(--muted); font-size:13px; }
+    @media(max-width:750px) { .topbar { padding:16px 18px; } .hero { margin-top:25px; padding-bottom:45px; } .section { padding:45px 18px; } .cards { grid-template-columns:1fr; } .google-info { padding:22px; } }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <img src="/logo.png" alt="School Dashboard logo">
-      <span>School Dashboard</span>
-    </div>
+    <div class="brand"><img src="/logo.png" alt="School Dashboard logo"><span>School Dashboard</span></div>
     <a href="/about" class="help-btn" aria-label="About School Dashboard">?</a>
   </header>
 
@@ -207,125 +51,47 @@
     <section class="hero">
       <div class="test-label">Homepage Test Version</div>
       <h1>Your Home for Classroom Resources</h1>
-      <p>
-        School Dashboard brings your school resources together in one convenient place,
-        helping you keep track of classes, assignments, schedules, and useful study tools.
-      </p>
-      <a href="/auth/google" class="google-btn" id="google-signin-btn">
-        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
-        <span>Sign in with Google</span>
-      </a>
+      <p>School can be busy enough already. School Dashboard brings your classes, assignments, schedules, citations, and helpful study tools together in one convenient place.</p>
+      <a href="/auth/google" class="google-btn" id="google-signin-btn"><img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo"><span>Sign in with Google</span></a>
     </section>
 
     <section class="section">
       <h2>What is School Dashboard?</h2>
-      <p class="section-intro">
-        School Dashboard is a student-focused organizer designed to put commonly used
-        school resources in one simple location.
-      </p>
+      <p class="section-intro">Think of it as a friendly home base for your schoolwork. Instead of jumping between different tools, you can find many of the things you need in one place.</p>
       <div class="cards">
-        <article class="card">
-          <h3>Google Classroom</h3>
-          <p>Connect your Google account to access the Classroom information available to the app.</p>
-        </article>
-        <article class="card">
-          <h3>Assignments</h3>
-          <p>Keep school assignments organized and use tools designed to make schoolwork easier to manage.</p>
-        </article>
-        <article class="card">
-          <h3>Schedule</h3>
-          <p>View school scheduling information in one place when the required Google services are connected.</p>
-        </article>
-        <article class="card">
-          <h3>Citations</h3>
-          <p>Create and organize source citations for school projects and research.</p>
-        </article>
-        <article class="card">
-          <h3>Study Tools</h3>
-          <p>Use additional tools designed to help with studying, organization, and school projects.</p>
-        </article>
-        <article class="card">
-          <h3>One Place</h3>
-          <p>Access your school resources from a single dashboard instead of keeping everything in separate places.</p>
-        </article>
+        <article class="card"><h3>Google Classroom</h3><p>Bring your Classroom information into your dashboard so it is easier to see what is going on.</p></article>
+        <article class="card"><h3>Assignments</h3><p>Keep track of school assignments and use tools that make your workload a little easier to manage.</p></article>
+        <article class="card"><h3>Schedule</h3><p>See your schedule and upcoming events in one place when the required Google services are connected.</p></article>
+        <article class="card"><h3>Citations</h3><p>Create citations for school projects and research without having to start from scratch every time.</p></article>
+        <article class="card"><h3>Study Tools</h3><p>Explore extra tools built to help with studying, organization, and school projects.</p></article>
+        <article class="card"><h3>One Place</h3><p>Keep the school resources you use most together, so you can spend less time looking for them.</p></article>
       </div>
     </section>
 
     <section class="section">
       <h2>How Google is Used</h2>
       <div class="google-info">
-        <p>
-          School Dashboard uses Google services to provide features that work with your school
-          account. Depending on the features you use and the permissions you approve, this can
-          include accessing information from services such as Google Classroom.
-        </p>
-        <p>
-          When you choose to sign in with Google, Google shows you the permissions requested by
-          School Dashboard. You can review those permissions before granting access.
-        </p>
-        <p>
-          The app only requests access needed for the Google-powered features that are available.
-          You can use the parts of School Dashboard that do not require a Google account without signing in.
-        </p>
+        <p>Some School Dashboard features work with your Google account. When you sign in, Google shows you the permissions the app is asking for, and you can review them before deciding whether to continue.</p>
+        <p>Google-powered features can include things like Classroom and Calendar information. Features that do not need your Google account can still be used without signing in.</p>
+        <a href="/google-data-info" class="more-btn">See more about Google &amp; your data →</a>
       </div>
     </section>
 
     <section class="section privacy">
       <h2>Privacy &amp; Security</h2>
-      <p class="section-intro">
-        We want you to understand what School Dashboard accesses and why. Our privacy policy
-        explains how information is handled, while our terms describe the rules for using the service.
-      </p>
-      <div class="links">
-        <a href="/privacy">Privacy Policy</a>
-        <span>•</span>
-        <a href="/terms">Terms of Service</a>
-      </div>
+      <p class="section-intro">We think you should be able to understand what an app is doing with your information. Our Privacy Policy explains the details, and our Terms of Service explain the rules for using School Dashboard.</p>
+      <div class="links"><a href="/privacy">Privacy Policy</a><span>•</span><a href="/terms">Terms of Service</a></div>
     </section>
   </main>
 
-  <footer class="footer">
-    School Dashboard — Homepage Test Version
-  </footer>
+  <footer class="footer">School Dashboard — Homepage Test Version</footer>
 
   <script>
-    const googleButton = document.getElementById("google-signin-btn");
-    const googleButtonText = googleButton.querySelector("span");
-
-    function setAuthLoading(isLoading) {
-      googleButton.style.pointerEvents = isLoading ? "none" : "auto";
-      googleButton.style.opacity = isLoading ? "0.75" : "1";
-      googleButtonText.textContent = isLoading ? "Loading..." : "Sign in with Google";
-    }
-
-    googleButton.addEventListener("click", function (e) {
-      e.preventDefault();
-      setAuthLoading(true);
-      const pw = 500, ph = 650;
-      const popup = window.open(
-        "/auth/google?popup=1", "google-auth-popup",
-        `width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`
-      );
-      if (!popup) {
-        window.location.href = "/auth/google";
-        return;
-      }
-      const check = window.setInterval(() => {
-        if (popup.closed) {
-          clearInterval(check);
-          setAuthLoading(false);
-        }
-      }, 500);
-    });
-
-    window.addEventListener("message", function (e) {
-      if (e.origin !== window.location.origin) return;
-      if (!e.data || e.data.type !== "google-auth-success" || !e.data.token) return;
-      localStorage.setItem("access_token", e.data.token);
-      localStorage.removeItem("demo_mode");
-      localStorage.removeItem("developer_mode");
-      window.location.href = "/dashboard";
-    });
+    const googleButton=document.getElementById("google-signin-btn");
+    const googleButtonText=googleButton.querySelector("span");
+    function setAuthLoading(isLoading){googleButton.style.pointerEvents=isLoading?"none":"auto";googleButton.style.opacity=isLoading?"0.75":"1";googleButtonText.textContent=isLoading?"Loading...":"Sign in with Google";}
+    googleButton.addEventListener("click",function(e){e.preventDefault();setAuthLoading(true);const pw=500,ph=650;const popup=window.open("/auth/google?popup=1","google-auth-popup",`width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`);if(!popup){window.location.href="/auth/google";return;}const check=window.setInterval(()=>{if(popup.closed){clearInterval(check);setAuthLoading(false);}},500);});
+    window.addEventListener("message",function(e){if(e.origin!==window.location.origin)return;if(!e.data||e.data.type!=="google-auth-success"||!e.data.token)return;localStorage.setItem("access_token",e.data.token);localStorage.removeItem("demo_mode");localStorage.removeItem("developer_mode");window.location.href="/dashboard";});
   </script>
 </body>
 </html>
