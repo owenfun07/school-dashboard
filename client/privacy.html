@@ -1,25 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TJ2NDQJZKN"></script>
   <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-TJ2NDQJZKN');</script>
-  <title>Privacy Policy</title>
+  <title>Privacy Policy — School Dashboard</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
   <script src="theme-loader.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .policy-page { max-width: 950px; margin: 0 auto; padding: 42px 24px 70px; text-align: left; }
+    .policy-page h1 { text-align: center; margin-bottom: 8px; }
+    .policy-date { text-align:center; color:var(--text-secondary); margin-bottom:42px; }
+    .policy-page h2 { margin-top:34px; }
+    .policy-page h3 { margin-top:24px; }
+    .policy-page p, .policy-page li { line-height:1.7; }
+    .policy-page ul { padding-left:26px; }
+    .policy-note { padding:18px 20px; border-left:4px solid var(--accent-color, #6366f1); background:rgba(99,102,241,.07); border-radius:8px; margin:20px 0; }
+    .policy-back { display:inline-block; margin-top:35px; }
+  </style>
 </head>
 <body>
-<div class="page">
+<div class="policy-page">
   <h1>Privacy Policy</h1>
-  <p>This application School Dashboard helps users view classroom, calendar and drive information in one place.</p>
-  <h2>Information We Access</h2>
-  <ul><li>Google Classroom courses and assignments</li><li>Google Calendar events</li><li>Google Drive Files</li></ul>
-  <h2>How We Use Your Information</h2>
-  <p>Your data is only used to display your dashboard. We do not store or sell your data.</p>
-  <h2>Data Storage</h2><p>No personal data is stored on our servers.</p>
-  <h2>Third-Party Services</h2><p>This app uses Google APIs and follows Google's policies.</p>
-  <h2>Contact</h2><p>owen.vozzella@gmail.com</p>
-  <br><a href="/" class="google-btn">← Back</a>
+  <p class="policy-date">School Dashboard</p>
+
+  <p>This Privacy Policy explains what information School Dashboard may access, how that information is used, and how information is handled when you use the service. We want this page to give you a clear and accurate description of the application's current behavior.</p>
+
+  <h2>1. Information We May Access</h2>
+  <p>School Dashboard can connect to Google services when you choose to sign in with Google and approve the requested permissions. The specific information available to the application depends on the permissions currently enabled and the features you use.</p>
+  <p>Google-powered features may include access to:</p>
+  <ul>
+    <li><strong>Google Classroom:</strong> courses, coursework, student submission information, and related schoolwork information covered by the permissions granted to the application.</li>
+    <li><strong>Google Calendar:</strong> calendar events that the granted read-only calendar permission allows the application to access.</li>
+    <li><strong>Google Drive:</strong> information needed by Drive features, including searching for recent or starred files and managing starred state where supported by the application's current permissions.</li>
+  </ul>
+  <p>School Dashboard does not automatically receive every piece of information in these services. Google controls the authorization process and only makes information available according to the permissions granted.</p>
+
+  <h2>2. How We Use Google Information</h2>
+  <p>Google information is used to provide the Google-powered features of School Dashboard. For example, Classroom information can be displayed in the dashboard, calendar information can be used for scheduling features, and Drive information can support Drive-related tools.</p>
+  <p>We do not use Google account information for advertising, sell it to third parties, or use it for unrelated purposes. The application is intended to use the information for the feature that requested access.</p>
+
+  <h2>3. Sign-In and Authentication</h2>
+  <p>School Dashboard uses Google OAuth to allow users to sign in and authorize access to supported Google services. Google presents the permission request before access is granted. You can review the permissions shown by Google before deciding whether to authorize the application.</p>
+  <p>An access token is used by the application when it needs to make authorized Google API requests. The browser may retain the token locally so the dashboard can continue operating during the current sign-in state. You can remove the local sign-in state by signing out or clearing the application's stored browser data.</p>
+
+  <h2>4. AI and Citation Features</h2>
+  <p>School Dashboard includes an <strong>optional</strong> AI-assisted feature in the Source Citation tool. AI is not required to sign in to the dashboard and is not required for the ordinary Google-powered dashboard features.</p>
+  <p>When you choose to use AI citation enhancement, citation-related information can be sent from the School Dashboard server to the configured Gemini API service. The feature is intended to help identify, improve, or complete bibliographic information such as a source title, author, publisher, or publication date.</p>
+  <p>The AI citation feature is separate from Google account authorization. It does not require the application to give Gemini access to your Google Classroom, Calendar, or Drive account. The application does not use AI as a general-purpose reader of your Google account.</p>
+  <div class="policy-note"><strong>Optional means optional:</strong> You can choose not to use AI-assisted citation enhancement. The rest of School Dashboard does not depend on that feature.</div>
+
+  <h2>5. Citation and Book Lookup Services</h2>
+  <p>The Source Citation tool can use external services to retrieve bibliographic or webpage metadata. Depending on the citation type and the available information, these may include Google Books, Open Library, and webpage metadata retrieval services.</p>
+  <p>These services are used to help create citations and are separate from your Google account permissions. Book searches may use information such as a book title, author, or ISBN. Web citation requests may use the source URL you provide.</p>
+
+  <h2>6. Information Stored on Our Servers</h2>
+  <p>School Dashboard is designed to minimize server-side storage of personal Google information. Google-powered dashboard data is retrieved when needed for the requested feature rather than being maintained as a permanent personal database.</p>
+  <p>Some server-side processing is necessary to provide the service. For example, citation metadata may be processed by the server, and optional AI citation enhancement is performed through the server-side citation endpoint.</p>
+  <p>The exact storage and retention behavior of infrastructure providers, logs, or temporary technical data can depend on the hosting and service configuration. We do not intentionally maintain a separate database of users' Google Classroom, Calendar, or Drive contents for unrelated purposes.</p>
+
+  <h2>7. Browser Storage</h2>
+  <p>School Dashboard may store application settings and locally managed information in your browser's local storage. This can include dashboard preferences, locally created assignments, course color preferences, demo/developer-mode state, and authentication state needed by the application.</p>
+  <p>Information stored only in your browser is controlled by the browser and device you use. Clearing the site's stored data can remove locally saved information.</p>
+
+  <h2>8. Information We Do Not Sell</h2>
+  <p>We do not sell your personal information or Google account information. We do not use Google user data for targeted advertising or unrelated commercial profiling.</p>
+
+  <h2>9. Third-Party Services</h2>
+  <p>School Dashboard relies on third-party services and APIs to provide parts of its functionality. These can include Google APIs, Google OAuth, Gemini, Google Books, Open Library, and hosting or analytics services used by the site.</p>
+  <p>Those services have their own privacy policies and terms. Information sent to a third-party service is subject to the service's applicable policies and the purpose for which that service is used.</p>
+
+  <h2>10. Children's and Student Use</h2>
+  <p>School Dashboard is designed with school and educational use in mind. Users should use the service in accordance with the rules of their school, organization, Google account, and applicable laws. We do not knowingly ask users to provide unnecessary sensitive personal information through the application.</p>
+
+  <h2>11. Security</h2>
+  <p>We take reasonable steps to limit unnecessary access to user information and to use appropriate technical measures for the service. However, no internet service can guarantee absolute security or uninterrupted availability.</p>
+
+  <h2>12. Changes to This Policy</h2>
+  <p>This Privacy Policy may be updated when School Dashboard's features, services, or data practices change. The version published on this page is the version that applies to current use of the service.</p>
+
+  <h2>13. Contact</h2>
+  <p>If you have questions or concerns about this Privacy Policy or how School Dashboard handles information, contact us at <strong>owen.vozzella@gmail.com</strong>.</p>
+
+  <a href="/" class="google-btn policy-back">← Back to School Dashboard</a>
 </div>
 </body>
 </html>
