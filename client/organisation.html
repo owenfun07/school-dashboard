@@ -25,7 +25,9 @@
     .org-icon  { font-size:30px; line-height:1; }
     .org-name  { font-size:16px; font-weight:700; color:var(--text-primary); margin:0; }
     .org-desc  { font-size:13px; color:var(--text-muted); line-height:1.55; margin:0; flex:1; }
-    .org-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; background:#d1fae5; color:#065f46; align-self:flex-start; }
+    .org-badges { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .org-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; background:#d1fae5; color:#065f46; }
+    .org-badge.ai { background:#ede9fe; color:#6d28d9; }
     .org-arrow { font-size:18px; color:var(--org-accent,#10b981); align-self:flex-end; opacity:0; transition:opacity 0.15s, transform 0.15s; }
     .org-card:hover .org-arrow { opacity:1; transform:translateX(3px); }
   </style>
@@ -40,8 +42,8 @@
       <a class="org-card" href="/assignment-tracker" style="--org-accent:#6366f1">
         <div class="org-icon">📋</div>
         <div class="org-name">Assignment Tracker</div>
-        <div class="org-badge">Classroom integrated</div>
-        <div class="org-desc">Kanban board to track assignments across To Do, In Progress and Done. Imports from Google Classroom automatically.</div>
+        <div class="org-badges"><span class="org-badge">Classroom integrated</span><span class="org-badge ai">AI integrated</span></div>
+        <div class="org-desc">Kanban board to track assignments across To Do, In Progress and Done. Imports from Google Classroom automatically and can scan written assignment lists with Gemini.</div>
         <div class="org-arrow">→</div>
       </a>
       <a class="org-card" href="/grade-calculator" style="--org-accent:#f59e0b">
