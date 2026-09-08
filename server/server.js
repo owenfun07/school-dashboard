@@ -1001,7 +1001,7 @@ app.post("/api/assignment-scan", async (req, res) => {
 // ── Developer Mode ─────────────────────────────────────────────────────
 // DEV_API_CODE is the secret API key for the Google Apps Script.
 // The current developer code is fetched server-side from that script.
-const DEV_API_BASE_URL = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhV5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
+const DEV_API_BASE_URL = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhVn5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
 
 app.post("/api/dev-mode/verify", async (req, res) => {
   const apiKey = typeof process.env.DEV_API_CODE === "string" ? process.env.DEV_API_CODE.trim() : "";
