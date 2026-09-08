@@ -33,7 +33,7 @@
 <body>
   <header class="topbar">
     <div class="brand"><img src="/logo.png" alt="School Dashboard logo"><span>School Dashboard</span></div>
-    <a class="back" href="/homepage-test">← Back to homepage</a>
+    <a class="back" href="/">← Back to homepage</a>
   </header>
 
   <main>
@@ -62,9 +62,13 @@
 
     <section class="card">
       <h2>What about AI?</h2>
-      <p>School Dashboard has an optional AI-powered feature for the Source Citation tool. It can help improve or fill in citation information when the normal webpage or book lookup does not provide enough metadata.</p>
-      <p>The AI feature is <strong>optional</strong>. You can use the citation tool without choosing to use AI when that option is available. AI is not required just to sign in to School Dashboard or use the regular dashboard.</p>
-      <p>When AI citation enhancement is used, the request is handled by the server and sent to the configured Gemini API service. The feature is intended to work with citation-related information, such as a source URL and metadata, rather than acting as a general-purpose reader of your Google account.</p>
+      <p>School Dashboard has optional AI-powered features in both Source Citation and the Assignment Tracker.</p>
+      <h3>Source Citation</h3>
+      <p>The Source Citation tool can use Gemini to improve or fill in citation information when the normal webpage or book lookup does not provide enough metadata.</p>
+      <h3>Assignment Scanner</h3>
+      <p>The Assignment Tracker can optionally accept a picture of written or printed assignments. The image is sent through the server to Gemini so it can identify assignment titles, courses, due dates, and visible notes.</p>
+      <p>The Assignment Scanner does <strong>not</strong> save the uploaded image to the School Dashboard server, a database, browser local storage, or the tracker. The image is processed temporarily for the request and then discarded by the feature. Only assignments you choose to add are saved locally as normal tracker data.</p>
+      <p>These AI features are <strong>optional</strong>. They do not give Gemini access to your Google Classroom, Calendar, or Drive account. The image scanner is not a general-purpose reader of your Google account.</p>
     </section>
 
     <section class="card">
