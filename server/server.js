@@ -11,7 +11,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "12mb" }));
 app.use(express.static(path.join(process.cwd(), "../client")));
 
 app.get("/", (req, res) => {
@@ -62,7 +62,7 @@ const GOOGLE_API_SERVICES = [
   {
     key: "gemini",
     name: "Gemini API",
-    description: "Enhances citation metadata from the server-side AI citation endpoint.",
+    description: "Powers optional AI citation enhancement and assignment scanning from uploaded images.",
     scopes: [],
     requiresToken: false,
   },
@@ -874,10 +874,134 @@ app.post("/api/ai/enhance-citation", async (req, res) => {
   }
 });
 
+// ── AI Assignment Scanner ────────────────────────────────────────────────
+const ASSIGNMENT_SCAN_MODEL = "gemini-3.1-flash-lite";
+const ASSIGNMENT_SCAN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const ASSIGNMENT_SCAN_MIME_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif", "image/avif"
+]);
+
+function parseImageDataUrl(value) {
+  if (typeof value !== "string") throw new Error("No image was provided.");
+  const match = value.match(/^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) throw new Error("The uploaded image format is invalid.");
+  const mimeType = match[1].toLowerCase();
+  if (!ASSIGNMENT_SCAN_MIME_TYPES.has(mimeType)) throw new Error("That image format is not supported.");
+  const base64 = match[2].replace(/\s/g, "");
+  const bytes = Buffer.from(base64, "base64");
+  if (!bytes.length) throw new Error("The uploaded image was empty.");
+  if (bytes.length > ASSIGNMENT_SCAN_MAX_IMAGE_BYTES) throw new Error("The image is larger than 8 MB.");
+  return { mimeType, base64 };
+}
+
+function validIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
+}
+
+function normalizeAssignmentScanResult(value) {
+  const assignments = Array.isArray(value?.assignments) ? value.assignments : [];
+  return {
+    assignments: assignments
+      .map(item => ({
+        title: typeof item?.title === "string" ? item.title.trim().slice(0, 300) : "",
+        course: typeof item?.course === "string" ? item.course.trim().slice(0, 150) : "",
+        dueDate: validIsoDate(item?.dueDate),
+        dueText: typeof item?.dueText === "string" ? item.dueText.trim().slice(0, 150) : "",
+        description: typeof item?.description === "string" ? item.description.trim().slice(0, 1000) : "",
+        priority: ["low", "normal", "medium", "high", "urgent", "critical"].includes(item?.priority) ? item.priority : "normal",
+        confidence: ["high", "medium", "low"].includes(item?.confidence) ? item.confidence : "medium",
+        needsReview: Boolean(item?.needsReview) || !validIsoDate(item?.dueDate),
+      }))
+      .filter(item => item.title)
+      .slice(0, 30),
+  };
+}
+
+app.post("/api/assignment-scan", async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!hasConfigValue(apiKey)) return res.status(503).json({ error: "AI assignment scanning is not configured on this server." });
+
+  let imageData;
+  try {
+    imageData = parseImageDataUrl(req.body?.image);
+    const today = /^\d{4}-\d{2}-\d{2}$/.test(String(req.body?.today || "")) ? String(req.body.today) : new Date().toISOString().slice(0, 10);
+    const timeZone = typeof req.body?.timeZone === "string" ? req.body.timeZone.slice(0, 100) : "";
+    const prompt = `You are an assignment extraction assistant for a school assignment tracker. Analyze the supplied image carefully. It may contain handwritten or printed school assignments, a planner page, a whiteboard, a worksheet, or a list of homework.\n\nExtract every distinct school assignment that is actually visible. Do not invent assignments, courses, dates, or details that are not supported by the image. Ignore unrelated text. If the same assignment is repeated, return it once.\n\nToday is ${today}${timeZone ? ` and the user's time zone is ${timeZone}` : ""}. If the image uses relative dates such as "tomorrow", "Friday", or "next Monday", resolve them to an exact YYYY-MM-DD date only when the date can be determined reliably from the supplied today/date context. If it cannot be determined, leave dueDate empty and preserve the wording in dueText.\n\nFor course, use the course/class name written in the image when available. Do not guess a course from an assignment title alone.\n\nFor priority, infer it only when the image clearly indicates urgency or importance; otherwise use normal.\n\nFor description, include useful visible details such as pages, chapter numbers, instructions, or notes. Do not add information that is not visible.\n\nSet needsReview to true when handwriting is unclear, a date is ambiguous, an assignment is only partially visible, or any important field required for the tracker is uncertain. Use confidence high only when the assignment is clearly readable.\n\nReturn only the requested JSON structure.`;
+    const requestBody = {
+      contents: [{
+        parts: [
+          { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } },
+          { text: prompt },
+        ],
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 4096,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            assignments: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING" },
+                  course: { type: "STRING" },
+                  dueDate: { type: "STRING" },
+                  dueText: { type: "STRING" },
+                  description: { type: "STRING" },
+                  priority: { type: "STRING", enum: ["low", "normal", "medium", "high", "urgent", "critical"] },
+                  confidence: { type: "STRING", enum: ["high", "medium", "low"] },
+                  needsReview: { type: "BOOLEAN" },
+                },
+                required: ["title", "course", "dueDate", "dueText", "description", "priority", "confidence", "needsReview"],
+              },
+            },
+          },
+          required: ["assignments"],
+        },
+      },
+    };
+
+    const geminiResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${ASSIGNMENT_SCAN_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }
+    );
+    const geminiData = await geminiResp.json().catch(() => ({}));
+    if (!geminiResp.ok) {
+      const status = geminiResp.status === 429 ? 429 : 502;
+      console.error("Assignment scan Gemini error:", geminiData?.error?.message || `HTTP ${geminiResp.status}`);
+      return res.status(status).json({ error: geminiResp.status === 429 ? "AI quota exceeded. Please try again later." : "Gemini could not analyze the image." });
+    }
+
+    const raw = geminiData?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim() || "";
+    if (!raw) return res.status(502).json({ error: "Gemini returned no assignment data." });
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    } catch (err) {
+      console.error("Assignment scan JSON parse error:", err);
+      return res.status(502).json({ error: "Gemini returned an unreadable assignment response." });
+    }
+
+    return res.json({ success: true, data: normalizeAssignmentScanResult(parsed) });
+  } catch (err) {
+    console.error("Assignment scan error:", err?.message || err);
+    const message = err?.message || "Could not analyze the assignment image.";
+    return res.status(400).json({ error: message });
+  } finally {
+    // The image is never written to disk, a database, localStorage, or any persistent store.
+    // Drop the request reference as soon as this endpoint finishes processing it.
+    imageData = null;
+    if (req.body && typeof req.body === "object") req.body.image = null;
+  }
+});
+
 // ── Developer Mode ─────────────────────────────────────────────────────
 // DEV_API_CODE is the secret API key for the Google Apps Script.
 // The current developer code is fetched server-side from that script.
-const DEV_API_BASE_URL = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhVn5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
+const DEV_API_BASE_URL = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhV5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
 
 app.post("/api/dev-mode/verify", async (req, res) => {
   const apiKey = typeof process.env.DEV_API_CODE === "string" ? process.env.DEV_API_CODE.trim() : "";
