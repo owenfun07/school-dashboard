@@ -26,37 +26,40 @@
       border-radius:14px;
       overflow:hidden;
     }
-    .sched-cell {
-      background:var(--card-bg); padding:0;
-      min-height:52px; position:relative;
-    }
-    .sched-cell-header {
-      background:var(--dash-bg); padding:10px 6px;
-      text-align:center; font-size:13px; font-weight:700;
-      color:var(--text-primary);
-    }
-    .sched-cell-time {
-      background:var(--dash-bg); padding:10px 6px;
-      text-align:right; font-size:11px; color:var(--text-muted);
-      font-weight:600; display:flex; align-items:center; justify-content:flex-end;
-    }
-    .sched-slot {
-      min-height:52px; padding:4px; cursor:pointer; position:relative;
-      transition:background 0.1s;
-    }
+    .sched-cell { background:var(--card-bg); padding:0; min-height:52px; position:relative; }
+    .sched-cell-header { background:var(--dash-bg); padding:10px 6px; text-align:center; font-size:13px; font-weight:700; color:var(--text-primary); }
+    .sched-cell-time { background:var(--dash-bg); padding:10px 6px; text-align:right; font-size:11px; color:var(--text-muted); font-weight:600; display:flex; align-items:center; justify-content:flex-end; }
+    .sched-slot { min-height:52px; padding:4px; cursor:pointer; position:relative; transition:background 0.1s; }
     .sched-slot:hover { background:var(--dash-bg); }
     .sched-slot.has-event { cursor:default; }
-
-    .sched-event {
-      border-radius:6px; padding:4px 6px; font-size:12px; font-weight:600;
-      line-height:1.3; position:relative; overflow:hidden;
-    }
-    .sched-event-del {
-      position:absolute; top:2px; right:4px; font-size:11px; cursor:pointer;
-      color:rgba(0,0,0,0.4); border:none; background:transparent; padding:0;
-      line-height:1; opacity:0; transition:opacity 0.1s;
-    }
+    .sched-event { border-radius:6px; padding:4px 6px; font-size:12px; font-weight:600; line-height:1.3; position:relative; overflow:hidden; }
+    .sched-event-del { position:absolute; top:2px; right:4px; font-size:11px; cursor:pointer; color:rgba(0,0,0,0.4); border:none; background:transparent; padding:0; line-height:1; opacity:0; transition:opacity 0.1s; }
     .sched-event:hover .sched-event-del { opacity:1; }
+
+    /* Assignment due-date section */
+    .assignments-section { margin-top:28px; }
+    .assignments-header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .assignments-header h2 { margin:0; color:var(--text-primary); font-size:20px; }
+    .assignment-source-note { margin:4px 0 0; color:var(--text-muted); font-size:12px; }
+    .assignment-groups { display:flex; flex-direction:column; gap:12px; }
+    .assignment-group { background:var(--dash-bg); border:1px solid var(--card-border); border-radius:14px; overflow:hidden; }
+    .assignment-group-header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 14px; background:var(--card-bg); border-bottom:1px solid var(--card-border); }
+    .assignment-group-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+    .assignment-group-count { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; background:var(--dash-bg); color:var(--text-muted); border:1px solid var(--card-border); }
+    .assignment-list { display:flex; flex-direction:column; }
+    .schedule-assignment { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border-bottom:1px solid var(--card-border); }
+    .schedule-assignment:last-child { border-bottom:none; }
+    .schedule-assignment-color { width:4px; min-height:38px; border-radius:4px; flex:0 0 auto; background:var(--course-color,#6366f1); }
+    .schedule-assignment-main { min-width:0; flex:1; }
+    .schedule-assignment-title { font-size:13px; font-weight:650; color:var(--text-primary); overflow-wrap:anywhere; }
+    .schedule-assignment-meta { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px; }
+    .schedule-assignment-course { font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; background:color-mix(in srgb,var(--course-color,#6366f1) 14%,transparent); color:var(--course-color,#4f46e5); }
+    .schedule-assignment-status { font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--card-bg); color:var(--text-muted); border:1px solid var(--card-border); }
+    .schedule-assignment-description { margin:5px 0 0; color:var(--text-muted); font-size:11px; line-height:1.4; white-space:pre-wrap; }
+    .assignment-empty { padding:24px; text-align:center; color:var(--text-muted); background:var(--dash-bg); border:1px dashed var(--card-border); border-radius:14px; font-size:13px; }
+    .assignment-no-date { border-color:#f59e0b; }
+    .assignment-no-date .assignment-group-header { background:#fffbeb; }
+    .assignment-no-date .assignment-group-title { color:#92400e; }
 
     /* Modal */
     .sched-modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.4); z-index:1000; display:none; align-items:center; justify-content:center; }
@@ -64,27 +67,21 @@
     .sched-modal { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:24px; width:min(380px,90vw); box-shadow:0 20px 60px rgba(0,0,0,0.15); }
     .sched-modal h3 { margin:0 0 16px; font-size:16px; color:var(--text-primary); }
     .sched-modal label { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:4px; }
-    .sched-modal-input {
-      width:100%; border:1px solid var(--card-border); border-radius:8px; padding:9px 12px;
-      font-size:14px; background:var(--dash-bg); color:var(--text-primary);
-      box-sizing:border-box; margin-bottom:12px;
-    }
+    .sched-modal-input { width:100%; border:1px solid var(--card-border); border-radius:8px; padding:9px 12px; font-size:14px; background:var(--dash-bg); color:var(--text-primary); box-sizing:border-box; margin-bottom:12px; }
     .sched-modal-input:focus { outline:none; border-color:#0ea5e9; }
     .sched-modal-btns { display:flex; gap:8px; margin-top:4px; }
-    .sched-modal-save   { flex:1; border:none; background:#0ea5e9; color:white; border-radius:8px; padding:10px; font-size:14px; font-weight:600; cursor:pointer; }
+    .sched-modal-save { flex:1; border:none; background:#0ea5e9; color:white; border-radius:8px; padding:10px; font-size:14px; font-weight:600; cursor:pointer; }
     .sched-modal-cancel { border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-secondary); border-radius:8px; padding:10px 16px; font-size:14px; cursor:pointer; }
-
     .color-row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
     .color-swatch { width:24px; height:24px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border-color .1s; }
     .color-swatch.selected { border-color:var(--text-primary); }
-
     .suggestions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
     .suggestion-chip { border:1px solid var(--card-border); background:var(--dash-bg); color:var(--text-secondary); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer; }
     .suggestion-chip:hover { border-color:#0ea5e9; color:#0ea5e9; }
-
     .status-banner { padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px; display:none; }
     .status-banner.info { background:#e0f2fe; color:#0c4a6e; border:1px solid #bae6fd; display:block; }
     .status-banner.warn { background:#fef3c7; color:#92400e; border:1px solid #fde68a; display:block; }
+    @media(max-width:700px){ .sched-page{padding:24px 16px;} .assignment-group-header{padding:10px 12px;} .schedule-assignment{padding:11px 12px;} }
   </style>
 </head>
 <body>
@@ -93,6 +90,7 @@
     <h1>🗓️ Schedule Builder</h1>
     <div class="sched-actions">
       <button class="sched-btn-primary" id="import-courses-btn">↓ Load my courses</button>
+      <button class="sched-btn" id="import-assignments-btn">📋 Import assignments</button>
       <button class="sched-btn" id="clear-btn">Clear all</button>
     </div>
   </div>
@@ -103,6 +101,16 @@
   <div class="sched-grid-wrap">
     <div class="sched-grid" id="sched-grid"></div>
   </div>
+
+  <section class="assignments-section">
+    <div class="assignments-header">
+      <div>
+        <h2>📋 Assignment Due Dates</h2>
+        <p class="assignment-source-note">Assignments are read from your Assignment Tracker on this device. Changes there appear here when you refresh/import.</p>
+      </div>
+    </div>
+    <div class="assignment-groups" id="assignment-groups"></div>
+  </section>
 </div>
 
 <!-- Add event modal -->
@@ -128,6 +136,8 @@
 <script>
 const token = localStorage.getItem("access_token");
 const STORE = "schedule_builder_data";
+const ASSIGNMENT_STORE = "assignment_tracker_cards";
+const COURSE_COLORS_STORE = "assignment_tracker_course_colors";
 const DAYS  = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
 const HOURS = [];
 for (let h=7; h<=20; h++) HOURS.push(h);
@@ -140,6 +150,7 @@ const COLORS = [
 // schedule[day][hour] = {name, color} | null
 let schedule = JSON.parse(localStorage.getItem(STORE) || "{}");
 let courseSuggestions = [];
+let assignmentCards = [];
 let selectedColor = COLORS[0];
 let pendingSlot = null; // {day, hour}
 
@@ -155,12 +166,10 @@ function buildGrid() {
   const grid = document.getElementById("sched-grid");
   grid.innerHTML = "";
 
-  // Top-left corner
   const corner = document.createElement("div");
   corner.className = "sched-cell sched-cell-header";
   grid.appendChild(corner);
 
-  // Day headers
   DAYS.forEach(day => {
     const h = document.createElement("div");
     h.className = "sched-cell sched-cell-header";
@@ -168,15 +177,12 @@ function buildGrid() {
     grid.appendChild(h);
   });
 
-  // Time rows
   HOURS.forEach(hour => {
-    // Time label
     const tl = document.createElement("div");
     tl.className = "sched-cell sched-cell-time";
     tl.textContent = timeLabel(hour);
     grid.appendChild(tl);
 
-    // Day slots
     DAYS.forEach(day => {
       const key = day + "-" + hour;
       const ev  = schedule[key];
@@ -206,7 +212,6 @@ function openModal(day, hour) {
   document.getElementById("modal-title").textContent = `Add to ${day} at ${timeLabel(hour)}`;
   document.getElementById("ev-name").value = "";
 
-  // Build colour swatches
   const cr = document.getElementById("color-row");
   cr.innerHTML = "";
   COLORS.forEach(c => {
@@ -217,7 +222,6 @@ function openModal(day, hour) {
     cr.appendChild(sw);
   });
 
-  // Course suggestions
   const sw = document.getElementById("suggestions-wrap");
   const sugg = document.getElementById("suggestions");
   sugg.innerHTML = "";
@@ -264,11 +268,107 @@ document.getElementById("clear-btn").onclick = () => {
   schedule = {}; save(); buildGrid();
 };
 
+// ── Assignment Tracker integration ───────────────────────────────
+function loadAssignmentsFromTracker() {
+  try {
+    const raw = localStorage.getItem(ASSIGNMENT_STORE);
+    const parsed = raw ? JSON.parse(raw) : [];
+    assignmentCards = Array.isArray(parsed) ? parsed.filter(a => a && typeof a === "object" && a.title) : [];
+  } catch (err) {
+    console.error("Schedule Builder: could not read Assignment Tracker data:", err);
+    assignmentCards = [];
+  }
+  renderAssignments();
+  return assignmentCards.length;
+}
+
+function normalizeCourseKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getCourseColor(course) {
+  const colors = JSON.parse(localStorage.getItem(COURSE_COLORS_STORE) || "{}");
+  return colors[normalizeCourseKey(course)] || "#6366f1";
+}
+
+function formatAssignmentDate(dateValue) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ""))) return "";
+  const date = new Date(dateValue + "T12:00:00");
+  if (Number.isNaN(date.getTime())) return dateValue;
+  return new Intl.DateTimeFormat(undefined, { weekday:"long", month:"long", day:"numeric", year:"numeric" }).format(date);
+}
+
+function assignmentStatusLabel(status) {
+  return ({ todo:"To Do", inprogress:"In Progress", done:"Done" })[status] || "To Do";
+}
+
+function renderAssignments() {
+  const container = document.getElementById("assignment-groups");
+  container.innerHTML = "";
+
+  if (!assignmentCards.length) {
+    container.innerHTML = '<div class="assignment-empty">No assignments found. Add assignments in Assignment Tracker, then click <strong>Import assignments</strong> here.</div>';
+    return;
+  }
+
+  const dated = assignmentCards.filter(a => /^\d{4}-\d{2}-\d{2}$/.test(String(a.dueDate || ""))).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  const undated = assignmentCards.filter(a => !/^\d{4}-\d{2}-\d{2}$/.test(String(a.dueDate || "")));
+
+  const groups = [];
+  const byDate = new Map();
+  dated.forEach(a => {
+    if (!byDate.has(a.dueDate)) byDate.set(a.dueDate, []);
+    byDate.get(a.dueDate).push(a);
+  });
+  byDate.forEach((items, date) => groups.push({ title:formatAssignmentDate(date), items, noDate:false }));
+  if (undated.length) groups.push({ title:"No due date", items:undated, noDate:true });
+
+  groups.forEach(group => {
+    const section = document.createElement("section");
+    section.className = "assignment-group" + (group.noDate ? " assignment-no-date" : "");
+
+    const header = document.createElement("div");
+    header.className = "assignment-group-header";
+    header.innerHTML = `<div class="assignment-group-title">${escHtml(group.title)}</div><span class="assignment-group-count">${group.items.length}</span>`;
+    section.appendChild(header);
+
+    const list = document.createElement("div");
+    list.className = "assignment-list";
+    group.items.forEach(a => {
+      const row = document.createElement("div");
+      row.className = "schedule-assignment";
+      const courseColor = getCourseColor(a.course);
+      row.style.setProperty("--course-color", courseColor);
+      row.innerHTML = `
+        <div class="schedule-assignment-color" aria-hidden="true"></div>
+        <div class="schedule-assignment-main">
+          <div class="schedule-assignment-title">${escHtml(a.title)}</div>
+          <div class="schedule-assignment-meta">
+            ${a.course ? `<span class="schedule-assignment-course">${escHtml(a.course)}</span>` : ""}
+            <span class="schedule-assignment-status">${escHtml(assignmentStatusLabel(a.status))}</span>
+          </div>
+          ${a.description ? `<p class="schedule-assignment-description">${escHtml(a.description)}</p>` : ""}
+        </div>`;
+      list.appendChild(row);
+    });
+    section.appendChild(list);
+    container.appendChild(section);
+  });
+}
+
+document.getElementById("import-assignments-btn").addEventListener("click", () => {
+  const count = loadAssignmentsFromTracker();
+  const banner = document.getElementById("status-banner");
+  banner.className = "status-banner info";
+  banner.textContent = count
+    ? `✓ Imported ${count} assignment${count !== 1 ? "s" : ""} from Assignment Tracker. Due dates are grouped below.`
+    : "ℹ️ No assignments found in Assignment Tracker on this device.";
+});
+
 // ── Import course names as suggestions ───────────────────────────
 document.getElementById("import-courses-btn").addEventListener("click", async () => {
   const banner = document.getElementById("status-banner");
   if (!token) {
-    // Demo mode — just show a message
     banner.className="status-banner warn";
     banner.textContent="⚠️ Log in to load your Classroom courses as suggestions.";
     return;
@@ -278,7 +378,8 @@ document.getElementById("import-courses-btn").addEventListener("click", async ()
   try {
     const resp = await fetch(`/api/classroom?token=${encodeURIComponent(token)}`);
     const data = await resp.json();
-    courseSuggestions = (data.courses||[]).map(c=>c.name);
+    if (!resp.ok) throw new Error(data.error || "Could not load courses.");
+    courseSuggestions = (data.courses||[]).map(c=>c.name).filter(Boolean);
     banner.textContent=`✓ Loaded ${courseSuggestions.length} course${courseSuggestions.length!==1?"s":""}. Click any slot to add them to your schedule.`;
   } catch(err) {
     banner.className="status-banner warn";
@@ -289,6 +390,7 @@ document.getElementById("import-courses-btn").addEventListener("click", async ()
 function escHtml(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
 buildGrid();
+loadAssignmentsFromTracker();
 </script>
 </body>
 </html>
