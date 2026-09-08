@@ -47,41 +47,49 @@
   <p>An access token is used by the application when it needs to make authorized Google API requests. The browser may retain the token locally so the dashboard can continue operating during the current sign-in state. You can remove the local sign-in state by signing out or clearing the application's stored browser data.</p>
 
   <h2>4. AI and Citation Features</h2>
-  <p>School Dashboard includes an <strong>optional</strong> AI-assisted feature in the Source Citation tool. AI is not required to sign in to the dashboard and is not required for the ordinary Google-powered dashboard features.</p>
+  <p>School Dashboard includes optional AI-assisted features. AI is not required to sign in to the dashboard and is not required for the ordinary Google-powered dashboard features.</p>
   <p>When you choose to use AI citation enhancement, citation-related information can be sent from the School Dashboard server to the configured Gemini API service. The feature is intended to help identify, improve, or complete bibliographic information such as a source title, author, publisher, or publication date.</p>
   <p>The AI citation feature is separate from Google account authorization. It does not require the application to give Gemini access to your Google Classroom, Calendar, or Drive account. The application does not use AI as a general-purpose reader of your Google account.</p>
   <div class="policy-note"><strong>Optional means optional:</strong> You can choose not to use AI-assisted citation enhancement. The rest of School Dashboard does not depend on that feature.</div>
 
-  <h2>5. Citation and Book Lookup Services</h2>
+  <h2>5. AI Assignment Scanner</h2>
+  <p>The Assignment Tracker includes an optional AI Assignment Scanner. When you choose to scan a picture of written or printed assignments, the selected image is sent through the School Dashboard server to the configured Gemini API service so Gemini can identify assignment titles, courses, due dates, and visible notes.</p>
+  <p><strong>School Dashboard does not intentionally save the uploaded assignment image to its server filesystem, database, browser local storage, or Assignment Tracker.</strong> The image is held only as temporary request data while the scan is being processed. The server does not put the image into a persistent file or database, and the feature does not save the image after the request finishes.</p>
+  <p>The image is transmitted to Gemini because Gemini performs the image analysis. Gemini's handling of submitted content is governed by Google's applicable Gemini API terms and privacy/data-handling policies. School Dashboard does not control Google's retention policies for data received by the Gemini service.</p>
+  <p>After Gemini returns structured assignment information, the image itself is discarded by the Assignment Scanner. Only the assignments you choose to add are saved locally in your browser as normal Assignment Tracker data.</p>
+
+  <h2>6. Citation and Book Lookup Services</h2>
   <p>The Source Citation tool can use external services to retrieve bibliographic or webpage metadata. Depending on the citation type and the available information, these may include Google Books, Open Library, and webpage metadata retrieval services.</p>
   <p>These services are used to help create citations and are separate from your Google account permissions. Book searches may use information such as a book title, author, or ISBN. Web citation requests may use the source URL you provide.</p>
 
-  <h2>6. Information Stored on Our Servers</h2>
+  <h2>7. Information Stored on Our Servers</h2>
   <p>School Dashboard is designed to minimize server-side storage of personal Google information. Google-powered dashboard data is retrieved when needed for the requested feature rather than being maintained as a permanent personal database.</p>
-  <p>Some server-side processing is necessary to provide the service. For example, citation metadata may be processed by the server, and optional AI citation enhancement is performed through the server-side citation endpoint.</p>
+  <p>Some server-side processing is necessary to provide the service. For example, citation metadata may be processed by the server, optional AI citation enhancement is performed through the server-side citation endpoint, and uploaded Assignment Scanner images are temporarily processed in memory during their request.</p>
+  <p>The Assignment Scanner does not intentionally persist uploaded images. The image is not written to the server filesystem or a database by this feature.</p>
   <p>The exact storage and retention behavior of infrastructure providers, logs, or temporary technical data can depend on the hosting and service configuration. We do not intentionally maintain a separate database of users' Google Classroom, Calendar, or Drive contents for unrelated purposes.</p>
 
-  <h2>7. Browser Storage</h2>
+  <h2>8. Browser Storage</h2>
   <p>School Dashboard may store application settings and locally managed information in your browser's local storage. This can include dashboard preferences, locally created assignments, course color preferences, demo/developer-mode state, and authentication state needed by the application.</p>
+  <p>AI Assignment Scanner images are <strong>not</strong> stored in browser local storage. The selected image is used only for the active scan and is cleared from the scanner after processing.</p>
   <p>Information stored only in your browser is controlled by the browser and device you use. Clearing the site's stored data can remove locally saved information.</p>
 
-  <h2>8. Information We Do Not Sell</h2>
+  <h2>9. Information We Do Not Sell</h2>
   <p>We do not sell your personal information or Google account information. We do not use Google user data for targeted advertising or unrelated commercial profiling.</p>
 
-  <h2>9. Third-Party Services</h2>
+  <h2>10. Third-Party Services</h2>
   <p>School Dashboard relies on third-party services and APIs to provide parts of its functionality. These can include Google APIs, Google OAuth, Gemini, Google Books, Open Library, and hosting or analytics services used by the site.</p>
   <p>Those services have their own privacy policies and terms. Information sent to a third-party service is subject to the service's applicable policies and the purpose for which that service is used.</p>
 
-  <h2>10. Children's and Student Use</h2>
+  <h2>11. Children's and Student Use</h2>
   <p>School Dashboard is designed with school and educational use in mind. Users should use the service in accordance with the rules of their school, organization, Google account, and applicable laws. We do not knowingly ask users to provide unnecessary sensitive personal information through the application.</p>
 
-  <h2>11. Security</h2>
+  <h2>12. Security</h2>
   <p>We take reasonable steps to limit unnecessary access to user information and to use appropriate technical measures for the service. However, no internet service can guarantee absolute security or uninterrupted availability.</p>
 
-  <h2>12. Changes to This Policy</h2>
+  <h2>13. Changes to This Policy</h2>
   <p>This Privacy Policy may be updated when School Dashboard's features, services, or data practices change. The version published on this page is the version that applies to current use of the service.</p>
 
-  <h2>13. Contact</h2>
+  <h2>14. Contact</h2>
   <p>If you have questions or concerns about this Privacy Policy or how School Dashboard handles information, contact us at <strong>owen.vozzella@gmail.com</strong>.</p>
 
   <a href="/" class="google-btn policy-back">← Back to School Dashboard</a>
