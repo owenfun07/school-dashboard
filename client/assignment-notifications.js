@@ -1,0 +1,150 @@
+/* Assignment Tracker browser notifications. No server/API is required for this version. */
+(function(){
+  "use strict";
+  const STORE_KEY="assignment_tracker_cards";
+  const DEV_KEY="developer_mode";
+  let timer=null;
+
+  function isAssignmentPage(){return /\/assignment-tracker(?:\.html)?$/.test(window.location.pathname);}
+  function isDev(){return localStorage.getItem(DEV_KEY)==="1";}
+  function getCards(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||"[]");}catch(e){console.warn("[Assignment Notifications] Could not read assignments.",e);return [];}}
+  function saveCards(cards){localStorage.setItem(STORE_KEY,JSON.stringify(cards));}
+  function esc(v){return String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+  function formatWhen(iso){const d=new Date(iso);return Number.isNaN(d.getTime())?"":d.toLocaleString([], {dateStyle:"medium",timeStyle:"short"});}
+  function permissionState(){return "Notification" in window?Notification.permission:"unsupported";}
+
+  function injectStyle(){
+    if(document.getElementById("assignment-notification-style"))return;
+    const s=document.createElement("style");s.id="assignment-notification-style";
+    s.textContent=`
+      .assignment-reminder-btn{border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:5px}
+      .assignment-reminder-btn:hover{background:var(--dash-bg);color:#6366f1}
+      .assignment-reminder-btn.active{color:#6366f1}
+      .assignment-reminder-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:1200;padding:20px}
+      .assignment-reminder-modal-backdrop.open{display:flex}
+      .assignment-reminder-modal{width:min(460px,100%);max-height:90vh;overflow:auto;background:var(--card-bg);color:var(--text-primary);border:1px solid var(--card-border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:22px;box-sizing:border-box}
+      .assignment-reminder-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+      .assignment-reminder-header h2{margin:0;font-size:20px}.assignment-reminder-subtitle{margin:4px 0 0;color:var(--text-muted);font-size:12px;line-height:1.45}
+      .assignment-reminder-close{border:0;background:transparent;color:var(--text-muted);font-size:24px;cursor:pointer}.assignment-reminder-options{display:grid;gap:8px}
+      .assignment-reminder-option{width:100%;text-align:left;border:1px solid var(--card-border);background:var(--dash-bg);color:var(--text-primary);border-radius:9px;padding:10px 12px;cursor:pointer;font:inherit;font-size:13px}
+      .assignment-reminder-option:hover{border-color:#6366f1;background:var(--card-bg)}
+      .assignment-reminder-custom{margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border);display:grid;gap:8px}
+      .assignment-reminder-custom label{font-size:11px;color:var(--text-muted);font-weight:600}.assignment-reminder-custom input{width:100%;box-sizing:border-box;border:1px solid var(--card-border);border-radius:8px;padding:9px;background:var(--dash-bg);color:var(--text-primary);font:inherit}
+      .assignment-reminder-actions{display:flex;gap:8px;margin-top:16px}.assignment-reminder-save{flex:1;border:0;background:#6366f1;color:#fff;border-radius:8px;padding:9px;font-weight:600;cursor:pointer}.assignment-reminder-cancel,.assignment-reminder-clear{border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-secondary);border-radius:8px;padding:9px 12px;cursor:pointer}.assignment-reminder-clear{color:#dc2626}
+      .assignment-reminder-status{font-size:12px;padding:9px 11px;border-radius:8px;background:var(--dash-bg);color:var(--text-secondary);margin-bottom:12px}.assignment-reminder-status.warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+      .assignment-reminder-dev{border:1px solid #6366f1;background:#ede9fe;color:#4f46e5;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer}
+    `;document.head.appendChild(s);
+  }
+
+  function ensureModal(){
+    if(document.getElementById("assignment-reminder-modal"))return;
+    const el=document.createElement("div");el.id="assignment-reminder-modal";el.className="assignment-reminder-modal-backdrop";
+    el.innerHTML=`<div class="assignment-reminder-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-reminder-title">
+      <div class="assignment-reminder-header"><div><h2 id="assignment-reminder-title">🔔 Remind me</h2><p class="assignment-reminder-subtitle" id="assignment-reminder-subtitle"></p></div><button class="assignment-reminder-close" type="button" aria-label="Close">×</button></div>
+      <div id="assignment-reminder-status" class="assignment-reminder-status"></div>
+      <div class="assignment-reminder-options" id="assignment-reminder-options"></div>
+      <div class="assignment-reminder-custom"><label for="assignment-reminder-datetime">Custom date &amp; time</label><input id="assignment-reminder-datetime" type="datetime-local"></div>
+      <div class="assignment-reminder-actions"><button class="assignment-reminder-clear" type="button">Clear</button><button class="assignment-reminder-cancel" type="button">Cancel</button><button class="assignment-reminder-save" type="button">Save reminder</button></div>
+    </div>`;
+    document.body.appendChild(el);
+    el.addEventListener("click",e=>{if(e.target===el||e.target.closest(".assignment-reminder-close")||e.target.closest(".assignment-reminder-cancel")){closeModal();}if(e.target.closest(".assignment-reminder-clear")){clearReminder();}if(e.target.closest(".assignment-reminder-save")){saveReminderFromModal();}});
+  }
+
+  let modalAssignmentId=null;
+  let selectedReminderTime=null;
+
+  function closeModal(){const el=document.getElementById("assignment-reminder-modal");if(el)el.classList.remove("open");modalAssignmentId=null;selectedReminderTime=null;}
+  function localInputValue(iso){const d=new Date(iso);if(Number.isNaN(d.getTime()))return"";const pad=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+  function reminderOptions(card){
+    const opts=[];const due=card&&card.due?new Date(card.due+"T23:59:00"):null;
+    if(due&&!Number.isNaN(due.getTime())){
+      [[15,"15 minutes before"],[30,"30 minutes before"],[60,"1 hour before"],[120,"2 hours before"],[1440,"1 day before"]].forEach(([m,label])=>opts.push({label,at:new Date(due.getTime()-m*60000)}));
+    }
+    return opts;
+  }
+  function openModal(id){
+    const card=getCards().find(c=>String(c.id)===String(id));if(!card)return;
+    modalAssignmentId=id;selectedReminderTime=card.reminderAt||null;ensureModal();
+    const modal=document.getElementById("assignment-reminder-modal"),status=document.getElementById("assignment-reminder-status"),opts=document.getElementById("assignment-reminder-options"),custom=document.getElementById("assignment-reminder-datetime");
+    document.getElementById("assignment-reminder-subtitle").textContent=card.title||"Assignment";
+    const perm=permissionState();
+    if(perm==="granted")status.textContent="Notifications are enabled on this browser.";
+    else if(perm==="default")status.textContent="The first time you save a reminder, your browser will ask for notification permission.";
+    else if(perm==="denied"){status.textContent="Notifications are blocked. Allow them for School Dashboard in your browser settings before using reminders.";status.classList.add("warn");}
+    else {status.textContent="This browser does not support notifications.";status.classList.add("warn");}
+    opts.innerHTML="";
+    reminderOptions(card).forEach(o=>{const b=document.createElement("button");b.type="button";b.className="assignment-reminder-option";b.textContent=`${o.label} — ${formatWhen(o.at.toISOString())}`;b.addEventListener("click",()=>{selectedReminderTime=o.at.toISOString();custom.value=localInputValue(selectedReminderTime);});opts.appendChild(b);});
+    if(!opts.children.length){const p=document.createElement("div");p.className="assignment-reminder-status";p.textContent="This assignment has no due date, so choose a custom reminder time below.";opts.appendChild(p);}
+    custom.value=card.reminderAt?localInputValue(card.reminderAt):"";
+    modal.classList.add("open");
+  }
+  async function requestPermission(){
+    if(permissionState()==="granted")return true;
+    if(permissionState()!=="default")return false;
+    try{return (await Notification.requestPermission())==="granted";}catch(e){console.warn("[Assignment Notifications] Permission request failed.",e);return false;}
+  }
+  function getSelectedTime(){
+    const custom=document.getElementById("assignment-reminder-datetime");
+    if(custom&&custom.value){const d=new Date(custom.value);if(!Number.isNaN(d.getTime()))return d.toISOString();}
+    return selectedReminderTime;
+  }
+  async function saveReminderFromModal(){
+    const when=getSelectedTime();
+    if(!when){alert("Choose a reminder time first.");return;}
+    const at=new Date(when);if(Number.isNaN(at.getTime())||at.getTime()<=Date.now()){alert("Choose a future reminder time.");return;}
+    const ok=await requestPermission();
+    if(!ok){alert("Notifications were not enabled, so the reminder was not saved. Please allow notifications in your browser settings and try again.");return;}
+    const cards=getCards(),card=cards.find(c=>String(c.id)===String(modalAssignmentId));if(!card)return;
+    card.reminderAt=at.toISOString();card.reminderSent=false;saveCards(cards);closeModal();location.reload();
+  }
+  function clearReminder(){
+    const cards=getCards(),card=cards.find(c=>String(c.id)===String(modalAssignmentId));if(!card)return;
+    delete card.reminderAt;delete card.reminderSent;saveCards(cards);closeModal();location.reload();
+  }
+
+  function getCardIdFromElement(el){
+    const edit=el.querySelector('button[onclick*="editCard("]');if(!edit)return null;
+    const m=edit.getAttribute("onclick").match(/editCard\(['\"]([^'\"]+)['\"]\)/);return m?m[1]:null;
+  }
+  function decorateCards(){
+    const cards=getCards();
+    document.querySelectorAll(".kanban-card").forEach(el=>{
+      const id=getCardIdFromElement(el);if(id===null)return;
+      const card=cards.find(c=>String(c.id)===String(id));if(!card)return;
+      const actions=el.querySelector(".kanban-card-actions");if(!actions||actions.querySelector(".assignment-reminder-btn"))return;
+      const b=document.createElement("button");b.type="button";b.className="assignment-reminder-btn";b.title=card.reminderAt?`Reminder: ${formatWhen(card.reminderAt)}`:"Set reminder";b.textContent=card.reminderAt?"🔔":"♧";
+      if(card.reminderAt)b.classList.add("active");b.addEventListener("click",e=>{e.stopPropagation();openModal(id);});actions.insertBefore(b,actions.firstChild);
+    });
+  }
+  function injectDevButton(){
+    if(!isDev()||document.getElementById("assignment-notification-test"))return;
+    const actions=document.querySelector(".tracker-actions");if(!actions)return;
+    const b=document.createElement("button");b.id="assignment-notification-test";b.className="assignment-reminder-dev";b.type="button";b.textContent="🔔 Test Notification";
+    b.addEventListener("click",async()=>{if(permissionState()==="default"&&!await requestPermission()){alert("Notification permission was not granted.");return;}if(permissionState()!=="granted"){alert("Notifications are blocked or unsupported.");return;}new Notification("School Dashboard — Test Notification",{body:"Assignment notifications are working!",tag:"school-dashboard-test"});});
+    actions.appendChild(b);
+  }
+  function notify(card){
+    if(permissionState()!=="granted")return false;
+    try{new Notification("Assignment Reminder",{body:`${card.title||"Assignment"}${card.due?` — due ${card.due}`:""}`,tag:`assignment-${card.id}`});return true;}catch(e){console.warn("[Assignment Notifications] Notification failed.",e);return false;}
+  }
+  function checkReminders(){
+    const cards=getCards();let changed=false,now=Date.now();
+    cards.forEach(card=>{
+      if(!card.reminderAt||card.reminderSent)return;
+      const t=new Date(card.reminderAt).getTime();if(Number.isNaN(t)||t>now)return;
+      if(card.col==="done"){delete card.reminderAt;delete card.reminderSent;changed=true;return;}
+      if(notify(card)){card.reminderSent=true;changed=true;}
+    });
+    if(changed)saveCards(cards);
+  }
+
+  function init(){
+    if(!isAssignmentPage())return;injectStyle();ensureModal();
+    const observer=new MutationObserver(()=>{decorateCards();injectDevButton();});observer.observe(document.body,{childList:true,subtree:true});
+    decorateCards();injectDevButton();checkReminders();timer=setInterval(checkReminders,30000);
+    window.addEventListener("focus",checkReminders);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkReminders();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+    console.info("[Assignment Notifications] Browser reminder system initialized.");
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
