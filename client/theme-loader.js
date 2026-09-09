@@ -97,16 +97,21 @@
 
     var vars = THEME_VARS[themeKey] || {};
     var root = document.documentElement;
-    // Clear old vars
     var allKeys = new Set();
     Object.values(THEME_VARS).forEach(function(t) { Object.keys(t).forEach(function(k) { allKeys.add(k); }); });
     allKeys.forEach(function(k) { root.style.removeProperty(k); });
-    // Apply theme vars
     Object.keys(vars).forEach(function(k) { root.style.setProperty(k, vars[k]); });
-    // Apply custom background override — set last so it always wins over the theme
     if (prefs.customBg) {
       root.style.setProperty("--dash-bg", prefs.customBg);
       root.style.setProperty("--page-bg", prefs.customBg);
+    }
+
+    // Assignment Tracker browser notifications are loaded only on that page.
+    if (/\/assignment-tracker(?:\.html)?$/.test(window.location.pathname)) {
+      var notificationScript = document.createElement("script");
+      notificationScript.src = "/assignment-notifications.js";
+      notificationScript.async = false;
+      document.head.appendChild(notificationScript);
     }
   } catch(e) {}
 })();
