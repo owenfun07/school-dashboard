@@ -236,3 +236,114 @@ if (window.location.pathname === "/source-citation" || window.location.pathname 
   scannerScript.defer = true;
   document.head.appendChild(scannerScript);
 }
+
+// Google API Status: show the public UptimeRobot status page in a centered modal.
+if (window.location.pathname === "/google-api-status" || window.location.pathname === "/google-api-status.html") {
+  const statusButton = document.createElement("button");
+  statusButton.type = "button";
+  statusButton.className = "status-button";
+  statusButton.textContent = "Website Status";
+  statusButton.setAttribute("aria-haspopup", "dialog");
+  statusButton.setAttribute("aria-controls", "website-status-modal");
+
+  const statusActions = document.querySelector(".status-actions");
+  if (statusActions) {
+    statusActions.insertBefore(statusButton, statusActions.firstChild);
+  }
+
+  const style = document.createElement("style");
+  style.textContent = `
+    #website-status-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 11000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.62);
+      backdrop-filter: blur(5px);
+    }
+    #website-status-modal.hidden { display: none !important; }
+    .website-status-dialog {
+      width: min(1100px, 100%);
+      height: min(760px, calc(100vh - 48px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 18px;
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--card-border, #ddd);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+    .website-status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--card-border, #ddd);
+      color: var(--text-primary, #111);
+    }
+    .website-status-title { margin: 0; font-size: 17px; font-weight: 800; }
+    .website-status-close {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--btn-bg, #f3f4f6);
+      color: var(--text-primary, #111);
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .website-status-close:hover { background: var(--btn-hover-bg, #e5e7eb); }
+    .website-status-frame {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      background: #fff;
+    }
+    @media (max-width: 600px) {
+      #website-status-modal { padding: 10px; }
+      .website-status-dialog { height: calc(100vh - 20px); border-radius: 14px; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const modal = document.createElement("div");
+  modal.id = "website-status-modal";
+  modal.className = "hidden";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "website-status-title");
+  modal.innerHTML = `
+    <div class="website-status-dialog">
+      <div class="website-status-header">
+        <h2 class="website-status-title" id="website-status-title">Website Status</h2>
+        <button type="button" class="website-status-close" aria-label="Close website status">×</button>
+      </div>
+      <iframe
+        class="website-status-frame"
+        title="School Dashboard website status"
+        src="https://stats.uptimerobot.com/dryIGZ7oAh"
+        loading="lazy"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const closeStatusModal = function () { modal.classList.add("hidden"); };
+  const openStatusModal = function () { modal.classList.remove("hidden"); };
+
+  statusButton.addEventListener("click", openStatusModal);
+  modal.querySelector(".website-status-close").addEventListener("click", closeStatusModal);
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) closeStatusModal();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) closeStatusModal();
+  });
+}
