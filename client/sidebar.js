@@ -237,7 +237,7 @@ if (window.location.pathname === "/source-citation" || window.location.pathname 
   document.head.appendChild(scannerScript);
 }
 
-// Google API Status: show the public UptimeRobot status page in a centered modal.
+// Google API Status: show UptimeRobot monitoring details in a centered modal.
 if (window.location.pathname === "/google-api-status" || window.location.pathname === "/google-api-status.html") {
   const statusButton = document.createElement("button");
   statusButton.type = "button";
@@ -266,11 +266,9 @@ if (window.location.pathname === "/google-api-status" || window.location.pathnam
     }
     #website-status-modal.hidden { display: none !important; }
     .website-status-dialog {
-      width: min(1100px, 100%);
-      height: min(760px, calc(100vh - 48px));
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      width: min(620px, 100%);
+      max-height: calc(100vh - 48px);
+      overflow: auto;
       border-radius: 18px;
       background: var(--card-bg, #fff);
       border: 1px solid var(--card-border, #ddd);
@@ -298,16 +296,56 @@ if (window.location.pathname === "/google-api-status" || window.location.pathnam
       cursor: pointer;
     }
     .website-status-close:hover { background: var(--btn-hover-bg, #e5e7eb); }
-    .website-status-frame {
-      flex: 1;
-      width: 100%;
-      min-height: 0;
-      border: 0;
-      background: #fff;
+    .website-status-content {
+      padding: 28px;
+      text-align: center;
+      color: var(--text-primary, #111);
     }
+    .website-status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 16px;
+      font-weight: 800;
+    }
+    .website-status-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.14);
+    }
+    .website-status-description {
+      max-width: 500px;
+      margin: 0 auto 22px;
+      line-height: 1.55;
+      color: var(--text-secondary, #555);
+    }
+    .website-status-provider {
+      margin: 0 0 22px;
+      font-size: 13px;
+      color: var(--text-secondary, #666);
+    }
+    .website-status-provider a,
+    .website-status-full-link {
+      color: inherit;
+      font-weight: 700;
+    }
+    .website-status-full-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 10px;
+      background: var(--primary-color, #4f46e5);
+      color: #fff;
+      text-decoration: none;
+    }
+    .website-status-full-link:hover { opacity: 0.9; }
     @media (max-width: 600px) {
       #website-status-modal { padding: 10px; }
-      .website-status-dialog { height: calc(100vh - 20px); border-radius: 14px; }
+      .website-status-content { padding: 24px 18px; }
     }
   `;
   document.head.appendChild(style);
@@ -324,13 +362,26 @@ if (window.location.pathname === "/google-api-status" || window.location.pathnam
         <h2 class="website-status-title" id="website-status-title">Website Status</h2>
         <button type="button" class="website-status-close" aria-label="Close website status">×</button>
       </div>
-      <iframe
-        class="website-status-frame"
-        title="School Dashboard website status"
-        src="https://stats.uptimerobot.com/dryIGZ7oAh"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-      ></iframe>
+      <div class="website-status-content">
+        <div class="website-status-indicator">
+          <span class="website-status-dot" aria-hidden="true"></span>
+          <span>Website monitoring is active</span>
+        </div>
+        <p class="website-status-description">
+          School Dashboard uptime is monitored by UptimeRobot. The full public status page contains the live monitor details and uptime history.
+        </p>
+        <p class="website-status-provider">
+          Monitoring provided by <a href="https://uptimerobot.com/" target="_blank" rel="noopener noreferrer">UptimeRobot</a>.
+        </p>
+        <a
+          class="website-status-full-link"
+          href="https://stats.uptimerobot.com/dryIGZ7oAh"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View Full Status Page →
+        </a>
+      </div>
     </div>
   `;
   document.body.appendChild(modal);
