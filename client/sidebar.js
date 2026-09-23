@@ -41,8 +41,9 @@ const NAV = [
     label: "Tools",
     href:  "/tools",
     items: [
-      { label: "Source Citation", href: "/placeholder-page-1" },
-      { label: "Calculators",     href: "/calculators"        },
+      { label: "Source Citation",    href: "/placeholder-page-1" },
+      { label: "Calculators",        href: "/calculators"        },
+      { label: "Google API Status",  href: "/google-api-status"  },
     ],
   },
 ];

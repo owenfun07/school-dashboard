@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My School</title>
+  <link rel="icon" type="image/x-icon" href="/logo.png">
+  <script src="theme-loader.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .my-school-page { min-height: 100vh; padding: 56px 24px; background: var(--page-bg); }
+    .my-school-shell { max-width: 760px; margin: 0 auto; }
+    .my-school-header { margin-bottom: 24px; }
+    .my-school-header h1 { margin: 0 0 8px; font-size: 30px; color: var(--text-primary); }
+    .my-school-header p { margin: 0; color: var(--text-secondary); line-height: 1.55; }
+    .my-school-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); padding: 24px; }
+    .my-school-card h2 { margin: 0 0 8px; color: var(--text-primary); }
+    .my-school-copy { color: var(--text-secondary); line-height: 1.55; margin: 0; }
+    .my-school-form { display: grid; gap: 14px; margin-top: 22px; }
+    .my-school-label { display: grid; gap: 6px; color: var(--text-secondary); font-size: 14px; font-weight: 600; }
+    .my-school-input { width: 100%; border: 1px solid var(--btn-border); background: var(--input-bg); color: var(--text-primary); border-radius: 10px; padding: 11px 12px; font: inherit; }
+    .my-school-button { border: 1px solid #2563eb; border-radius: 10px; background: #2563eb; color: #fff; cursor: pointer; font: inherit; font-weight: 700; padding: 11px 14px; }
+    .my-school-button:hover { background: #1d4ed8; }
+    .my-school-button.secondary { background: var(--btn-bg); border-color: var(--btn-border); color: var(--text-primary); }
+    .my-school-message { margin: 16px 0 0; border-radius: 10px; padding: 11px 12px; color: var(--text-secondary); background: var(--dash-bg); border: 1px solid var(--card-border); line-height: 1.45; }
+    .my-school-message.error { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
+    .my-school-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+    .my-school-detail { border: 1px solid var(--card-border); background: var(--dash-bg); border-radius: 12px; padding: 14px; }
+    .my-school-detail-label { color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .my-school-detail-value { margin-top: 6px; color: var(--text-primary); font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+    .my-school-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+    .hidden { display: none !important; }
+    @media (max-width: 580px) { .my-school-page { padding: 42px 18px; } .my-school-details { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="my-school-page">
+    <section class="my-school-shell">
+      <header class="my-school-header">
+        <h1>My School</h1>
+        <p>This private setup page checks that your Supabase account is connected to the correct school membership.</p>
+      </header>
+
+      <section class="my-school-card" id="loading-view">
+        <h2>Loading secure school setup…</h2>
+        <p class="my-school-copy">Checking the Supabase configuration and your session.</p>
+      </section>
+
+      <section class="my-school-card hidden" id="sign-in-view">
+        <h2>Sign in to your school account</h2>
+        <p class="my-school-copy">Use the email and password for the account you created in Supabase Authentication.</p>
+        <form class="my-school-form" id="sign-in-form">
+          <label class="my-school-label">Email<input class="my-school-input" id="email" type="email" autocomplete="email" required></label>
+          <label class="my-school-label">Password<input class="my-school-input" id="password" type="password" autocomplete="current-password" required></label>
+          <button class="my-school-button" type="submit">Sign in</button>
+        </form>
+        <p class="my-school-message hidden" id="sign-in-message" role="alert"></p>
+      </section>
+
+      <section class="my-school-card hidden" id="school-view">
+        <h2 id="welcome-heading">Your school membership</h2>
+        <p class="my-school-copy" id="school-subheading"></p>
+        <div class="my-school-details">
+          <div class="my-school-detail"><div class="my-school-detail-label">School</div><div class="my-school-detail-value" id="school-name"></div></div>
+          <div class="my-school-detail"><div class="my-school-detail-label">Role</div><div class="my-school-detail-value" id="role"></div></div>
+          <div class="my-school-detail"><div class="my-school-detail-label">Membership status</div><div class="my-school-detail-value" id="status"></div></div>
+          <div class="my-school-detail"><div class="my-school-detail-label">Grade</div><div class="my-school-detail-value" id="grade"></div></div>
+        </div>
+        <div class="my-school-actions"><button class="my-school-button secondary" id="sign-out-button" type="button">Sign out</button></div>
+      </section>
+
+      <section class="my-school-card hidden" id="setup-error-view">
+        <h2>School setup needs attention</h2>
+        <p class="my-school-copy" id="setup-error-text"></p>
+        <div class="my-school-actions"><button class="my-school-button secondary" id="retry-button" type="button">Try again</button></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const views = {
+      loading: document.getElementById("loading-view"),
+      signIn: document.getElementById("sign-in-view"),
+      school: document.getElementById("school-view"),
+      error: document.getElementById("setup-error-view"),
+    };
+    let supabaseClient;
+
+    function showView(name) {
+      Object.entries(views).forEach(([key, element]) => element.classList.toggle("hidden", key !== name));
+    }
+
+    function showError(message) {
+      document.getElementById("setup-error-text").textContent = message;
+      showView("error");
+    }
+
+    function formatLabel(value) {
+      return value ? value.replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase()) : "Not assigned";
+    }
+
+    async function loadMembership() {
+      showView("loading");
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !user) {
+        showView("signIn");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("id, display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        showError("Your Supabase account is signed in, but it does not have a matching profiles row yet. Confirm that profiles.id matches Authentication → Users.id.");
+        return;
+      }
+
+      const { data: membership, error: membershipError } = await supabaseClient
+        .from("school_memberships")
+        .select("role, status, school:schools(name, slug), grade:grades(name, sort_order)")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (membershipError || !membership) {
+        showError("Your profile exists, but no active school membership was found. Confirm that school_memberships.user_id matches your profile ID and that status is active.");
+        return;
+      }
+
+      document.getElementById("welcome-heading").textContent = `Welcome, ${profile.display_name}`;
+      document.getElementById("school-subheading").textContent = "Your account is connected to this active school membership.";
+      document.getElementById("school-name").textContent = membership.school?.name || "School record unavailable";
+      document.getElementById("role").textContent = formatLabel(membership.role);
+      document.getElementById("status").textContent = formatLabel(membership.status);
+      document.getElementById("grade").textContent = membership.grade?.name || "Not assigned";
+      showView("school");
+    }
+
+    async function initialise() {
+      try {
+        const response = await fetch("/api/community/config");
+        const config = await response.json();
+        if (!response.ok) throw new Error(config.error || "Supabase is not configured on this server.");
+        supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
+        await loadMembership();
+      } catch (error) {
+        showError(error.message || "Unable to load the Supabase configuration.");
+      }
+    }
+
+    document.getElementById("sign-in-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const message = document.getElementById("sign-in-message");
+      message.classList.add("hidden");
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        message.textContent = error.message;
+        message.className = "my-school-message error";
+        return;
+      }
+      await loadMembership();
+    });
+
+    document.getElementById("sign-out-button").addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      showView("signIn");
+    });
+
+    document.getElementById("retry-button").addEventListener("click", initialise);
+    initialise();
+  </script>
+</body>
+</html>

@@ -100,7 +100,8 @@
     </p>
     <div class="ai-modal-note">
       🔒 AI is called through our server — your URL is sent to Google Gemini to look up
-      missing details. No personal data is sent.
+      missing details. If basic AI cannot fill the fields, it may use Google Search
+      grounding for better source information. No personal data is sent.
     </div>
     <div class="ai-modal-btns">
       <button class="ai-btn-continue" id="ai-consent-yes">
@@ -284,8 +285,18 @@ async function callAI() {
     if (!document.getElementById("publisher").value.trim()   && d.publisher)   { document.getElementById("publisher").value   = d.publisher;   filled++; }
     if (!document.getElementById("publishDate").value.trim() && d.publishDate) { document.getElementById("publishDate").value = d.publishDate; filled++; }
 
+    const mode = data.ai?.mode || "standard";
+    const grounded = mode === "grounded";
+    const groundingWarning = data.ai?.warning === "google_search_grounding_unavailable";
+
     if (filled > 0) {
-      showNotice(`✨ AI filled in ${filled} missing field${filled !== 1 ? "s" : ""}. Review before adding.`, "ai", false);
+      const sourceText = grounded ? " using Google Search grounding" : "";
+      const warningText = groundingWarning ? " Google Search grounding was unavailable, so this used regular AI only." : "";
+      showNotice(`✨ AI filled in ${filled} missing field${filled !== 1 ? "s" : ""}${sourceText}. Review before adding.${warningText}`, "ai", false);
+    } else if (grounded) {
+      showNotice("✨ AI checked with Google Search grounding — no additional fields could be determined.", "ai", false);
+    } else if (groundingWarning) {
+      showNotice("✨ AI checked, but Google Search grounding was unavailable. No additional fields could be determined.", "ai", false);
     } else {
       showNotice("✨ AI checked — no additional fields could be determined.", "ai", false);
     }
