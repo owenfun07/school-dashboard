@@ -1,6 +1,6 @@
 /*
  * School Dashboard service worker
- * Offline support for the local Assignment Tracker only.
+ * Offline page-shell support for selected lightweight tools.
  *
  * Intentionally does not cache API responses, Google data, authentication
  * tokens, or other private/user-specific network responses.
@@ -50,12 +50,12 @@ self.addEventListener("install", event => {
     }));
 
     const trackerCache = await caches.open(TRACKER_CACHE);
-    for (const url of TRACKER_URLS) {
+    for (const url of OFFLINE_PAGES) {
       try {
         const response = await fetch(url, { cache: "reload" });
         if (response.ok) await trackerCache.put(url, response);
       } catch (error) {
-        console.warn("[PWA] Could not pre-cache Assignment Tracker:", url, error);
+        console.warn("[PWA] Could not pre-cache offline tool:", url, error);
       }
     }
     await self.skipWaiting();
