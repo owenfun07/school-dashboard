@@ -9,7 +9,9 @@
   gtag('config', 'G-TJ2NDQJZKN');
 </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <meta name="theme-color" content="#6366f1">\n  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="manifest" href="/manifest.webmanifest">
   <title>School Dashboard</title>
   <link rel="icon" type="image/x-icon" href="/logo.png">
   <script src="theme-loader.js"></script>
@@ -98,5 +100,15 @@
     googleButton.addEventListener("click",function(e){e.preventDefault();setAuthLoading(true);const pw=500,ph=650;const popup=window.open("/auth/google?popup=1","google-auth-popup",`width=${pw},height=${ph},left=${window.screenX+(window.outerWidth-pw)/2},top=${window.screenY+(window.outerHeight-ph)/2}`);if(!popup){window.location.href="/auth/google";return;}const check=window.setInterval(()=>{if(popup.closed){clearInterval(check);setAuthLoading(false);}},500);});
     window.addEventListener("message",function(e){if(e.origin!==window.location.origin)return;if(!e.data||e.data.type!=="google-auth-success"||!e.data.token)return;localStorage.setItem("access_token",e.data.token);localStorage.removeItem("demo_mode");localStorage.removeItem("developer_mode");window.location.href="/dashboard";});
   </script>
-  <script>\n    // Register the PWA service worker without blocking page startup.\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/service-worker.js").catch(function (error) {\n          console.warn("School Dashboard service worker registration failed:", error);\n        });\n      });\n    }\n  </script>\n</body>
+  <script>
+    // Register the PWA service worker without blocking page startup.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js").catch(function (error) {
+          console.warn("School Dashboard service worker registration failed:", error);
+        });
+      });
+    }
+  </script>
+</body>
 </html>
