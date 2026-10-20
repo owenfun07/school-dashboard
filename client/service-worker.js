@@ -13,9 +13,28 @@ const APP_ASSETS = [
   "/style.css",
   "/theme-loader.js",
   "/sidebar.js",
-  "/assignment-notifications.js"
+  "/assignment-notifications.js",
+  "/placeholder-page-1.css",
+  "/full-schedule.js",
+  "/source-citation.js",
+  "/book-citation-enhancements.js",
+  "/resize-persistence.js"
 ];
-const TRACKER_URLS = ["/assignment-tracker", "/assignment-tracker.html"];
+
+// Pages that are useful without Google services or other live APIs.
+// These are cached as page shells; features requiring online services may not work.
+const OFFLINE_PAGES = [
+  "/assignment-tracker", "/assignment-tracker.html",
+  "/calculator", "/calculator.html",
+  "/calculators", "/calculators.html",
+  "/grade-calculator", "/grade-calculator.html",
+  "/tools", "/tools.html",
+  "/organisation", "/organisation.html",
+  "/schedule-builder", "/schedule-builder.html",
+  "/full-schedule", "/full-schedule.html",
+  "/source-citation", "/source-citation.html",
+  "/about", "/about.html"
+];
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -62,7 +81,7 @@ self.addEventListener("fetch", event => {
   // Never cache API calls or responses that could contain private data.
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
 
-  if (request.mode === "navigate" && TRACKER_URLS.includes(url.pathname)) {
+  if (request.mode === "navigate" && OFFLINE_PAGES.includes(url.pathname)) {
     event.respondWith((async () => {
       try {
         const response = await fetch(request);
@@ -73,9 +92,9 @@ self.addEventListener("fetch", event => {
         return response;
       } catch (error) {
         const cache = await caches.open(TRACKER_CACHE);
-        const cached = await cache.match(url.pathname) || await cache.match("/assignment-tracker");
+        const cached = await cache.match(url.pathname) || await cache.match(url.pathname + ".html") || await cache.match(url.pathname.replace(/\\.html$/, ""));
         if (cached) return cached;
-        return new Response("The Assignment Tracker has not been saved for offline use yet. Connect to the internet once, then try again.", {
+        return new Response("This tool has not been saved for offline use yet. Connect to the internet once, open this page, then try again.", {
           status: 503,
           headers: { "Content-Type": "text/plain; charset=utf-8" }
         });
