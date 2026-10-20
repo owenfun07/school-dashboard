@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "School Dashboard",
+  "short_name": "School Dashboard",
+  "description": "Your home for classroom resources, assignments, schedules, and study tools.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f7fb",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1012x1012",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
